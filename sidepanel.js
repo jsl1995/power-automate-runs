@@ -1,4 +1,4 @@
-// Side panel logic for Power Automate Run History
+// Side panel logic for Flow Run Buddy
 
 (function() {
   'use strict';

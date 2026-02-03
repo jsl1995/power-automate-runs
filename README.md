@@ -1,4 +1,4 @@
-# Power Automate Run History
+# Flow Run Buddy
 
 A Chrome extension that displays run history for Power Automate Cloud Flows directly from the flow designer.
 
@@ -20,7 +20,7 @@ A Chrome extension that displays run history for Power Automate Cloud Flows dire
 2. Open Chrome and navigate to `chrome://extensions/`
 3. Enable **Developer mode** (toggle in top right)
 4. Click **Load unpacked**
-5. Select the `power-automate-runs` folder
+5. Select the extension folder
 
 ## Usage
 

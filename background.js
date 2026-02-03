@@ -1,4 +1,4 @@
-// Background service worker for Power Automate Run History extension
+// Background service worker for Flow Run Buddy extension
 
 // Store current flow context per tab
 const tabContexts = new Map();

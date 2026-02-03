@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Power Automate Run History",
+  "name": "Flow Run Buddy",
   "version": "1.0.0",
   "description": "View run history for Power Automate Cloud Flows directly from the flow designer",
   "permissions": [
@@ -31,7 +31,7 @@
     "default_path": "sidepanel.html"
   },
   "action": {
-    "default_title": "Power Automate Run History"
+    "default_title": "Flow Run Buddy"
   },
   "icons": {
     "16": "icons/icon16.png",
