@@ -120,6 +120,26 @@ h1 {
   background: #f3f2f1;
 }
 
+.primary-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  background: #0078d4;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.primary-btn:hover {
+  background: #106ebe;
+}
+
+.primary-btn:active {
+  background: #005a9e;
+}
+
 .back-to-editor {
   padding: 8px 16px;
   background: #fff;

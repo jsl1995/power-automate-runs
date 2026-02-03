@@ -10,6 +10,8 @@
   const errorMessageEl = document.getElementById('error-message');
   const runsListEl = document.getElementById('runs-list');
   const noRunsEl = document.getElementById('no-runs');
+  const powerAppsRedirectEl = document.getElementById('powerapps-redirect');
+  const openInPowerAutomateBtn = document.getElementById('open-in-powerautomate');
   const refreshBtn = document.getElementById('refresh-btn');
   const retryBtn = document.getElementById('retry-btn');
   const backToEditorEl = document.getElementById('back-to-editor');
@@ -28,8 +30,17 @@
     errorEl.classList.add('hidden');
     runsListEl.classList.add('hidden');
     noRunsEl.classList.add('hidden');
+    powerAppsRedirectEl.classList.add('hidden');
 
     state.classList.remove('hidden');
+  }
+
+  // Open flow in Power Automate
+  function openInPowerAutomate() {
+    if (!currentContext || !currentTabId) return;
+    const { environmentId, flowId } = currentContext;
+    const url = `https://make.powerautomate.com/environments/${environmentId}/flows/${flowId}`;
+    chrome.tabs.update(currentTabId, { url: url });
   }
 
   // Format relative time
@@ -342,6 +353,12 @@
 
       if (context) {
         currentContext = context;
+        // Check if on Power Apps - show redirect message
+        if (context.isPowerApps) {
+          backToEditorEl.classList.add('hidden');
+          showState(powerAppsRedirectEl);
+          return;
+        }
         // Always store/update the editor URL from context
         flowEditorUrl = getFlowEditorUrl(context);
         updateBackButton();
@@ -359,6 +376,12 @@
     if (message.type === 'CONTEXT_UPDATED' && message.tabId === currentTabId) {
       currentContext = message.context;
       if (currentContext) {
+        // Check if on Power Apps - show redirect message
+        if (currentContext.isPowerApps) {
+          backToEditorEl.classList.add('hidden');
+          showState(powerAppsRedirectEl);
+          return;
+        }
         // Always keep the editor URL updated
         flowEditorUrl = getFlowEditorUrl(currentContext);
         updateBackButton();
@@ -384,6 +407,7 @@
   });
 
   backBtn.addEventListener('click', returnToEditor);
+  openInPowerAutomateBtn.addEventListener('click', openInPowerAutomate);
 
   // Start
   init();

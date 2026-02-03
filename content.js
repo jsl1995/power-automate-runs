@@ -6,6 +6,8 @@
   // Extract flow context from URL
   function extractFlowContext() {
     const url = window.location.href;
+    const origin = window.location.origin;
+    const isPowerApps = origin.includes('powerapps.com');
 
     // Extract environment ID (always present)
     const envMatch = url.match(/\/environments\/([^/]+)/);
@@ -14,8 +16,14 @@
     const environmentId = envMatch[1];
     let flowId = null;
 
-    // Match /flows/{flowId} pattern
-    const flowMatch = url.match(/\/flows\/([^/?]+)/);
+    // Match /flows/{flowId} pattern (Power Automate)
+    let flowMatch = url.match(/\/flows\/([^/?]+)/);
+    
+    // Also match /objects/cloudflows/{flowId} pattern (Power Apps)
+    if (!flowMatch) {
+      flowMatch = url.match(/\/objects\/cloudflows\/([^/?]+)/);
+    }
+    
     if (flowMatch) {
       flowId = flowMatch[1];
     }
@@ -24,8 +32,9 @@
       return {
         environmentId: environmentId,
         flowId: flowId,
-        origin: window.location.origin,
-        url: url
+        origin: origin,
+        url: url,
+        isPowerApps: isPowerApps
       };
     }
     return null;
