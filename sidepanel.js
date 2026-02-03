@@ -22,6 +22,7 @@
   let currentTabId = null;
   let isLoading = false;
   let flowEditorUrl = null; // Store the flow editor URL to return to
+  let savedSolutionId = null; // Preserve solution ID across navigation
 
   // Show a specific state
   function showState(state) {
@@ -299,18 +300,17 @@
     if (!currentContext || !currentTabId) return;
     const { environmentId, flowId, solutionId } = currentContext;
 
-    console.log('openInPowerApps - currentContext:', currentContext);
-    console.log('openInPowerApps - solutionId:', solutionId);
+    // Use saved solution ID if current context doesn't have one
+    const effectiveSolutionId = solutionId || savedSolutionId;
 
     let url;
-    if (solutionId) {
+    if (effectiveSolutionId) {
       // Use cloudflows URL pattern when we have a solution ID
-      url = `https://make.powerapps.com/environments/${environmentId}/solutions/${solutionId}/objects/cloudflows/${flowId}/view`;
+      url = `https://make.powerapps.com/environments/${environmentId}/solutions/${effectiveSolutionId}/objects/cloudflows/${flowId}/view`;
     } else {
       // Fallback to standard flows URL
       url = `https://make.powerapps.com/environments/${environmentId}/flows/${flowId}`;
     }
-    console.log('openInPowerApps - url:', url);
     chrome.tabs.update(currentTabId, { url: url });
   }
 
@@ -372,6 +372,10 @@
 
       if (context) {
         currentContext = context;
+        // Save solution ID if present (preserve across navigation)
+        if (context.solutionId) {
+          savedSolutionId = context.solutionId;
+        }
         // Always store/update the editor URL from context
         flowEditorUrl = getFlowEditorUrl(context);
         updateBackButton();
@@ -389,6 +393,10 @@
     if (message.type === 'CONTEXT_UPDATED' && message.tabId === currentTabId) {
       currentContext = message.context;
       if (currentContext) {
+        // Save solution ID if present (preserve across navigation)
+        if (currentContext.solutionId) {
+          savedSolutionId = currentContext.solutionId;
+        }
         // Always keep the editor URL updated
         flowEditorUrl = getFlowEditorUrl(currentContext);
         updateBackButton();
