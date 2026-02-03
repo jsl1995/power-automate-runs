@@ -281,11 +281,18 @@
   function openRun(runId) {
     if (!currentContext) return;
 
-    const { environmentId, flowId, origin } = currentContext;
+    const { environmentId, flowId, origin, solutionId } = currentContext;
     const baseUrl = origin || 'https://make.powerautomate.com';
+    const effectiveSolutionId = solutionId || savedSolutionId;
 
-    // Runs always use the standard /flows/ pattern on both platforms
-    const runUrl = `${baseUrl}/environments/${environmentId}/flows/${flowId}/runs/${runId}`;
+    let runUrl;
+    if (baseUrl.includes('powerapps.com') && effectiveSolutionId) {
+      // Power Apps requires cloudflows pattern with solution context
+      runUrl = `${baseUrl}/environments/${environmentId}/solutions/${effectiveSolutionId}/objects/cloudflows/${flowId}/runs/${runId}`;
+    } else {
+      // Power Automate uses standard flows pattern
+      runUrl = `${baseUrl}/environments/${environmentId}/flows/${flowId}/runs/${runId}`;
+    }
 
     chrome.tabs.update(currentTabId, { url: runUrl });
   }
