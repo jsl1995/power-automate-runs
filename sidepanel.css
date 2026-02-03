@@ -240,3 +240,131 @@ h1 {
   flex-shrink: 0;
   color: #a19f9d;
 }
+
+/* Expand button */
+.expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #605e5c;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+
+.expand-btn:hover {
+  background: #edebe9;
+  color: #323130;
+}
+
+.expand-icon {
+  transition: transform 0.2s ease;
+}
+
+.open-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #a19f9d;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.open-btn:hover {
+  background: #0078d4;
+  color: #fff;
+}
+
+/* Run container */
+.run-container {
+  border-bottom: 1px solid #f3f2f1;
+}
+
+.run-container:last-child {
+  border-bottom: none;
+}
+
+/* Actions container */
+.actions-container {
+  background: #f9f9f9;
+  padding: 8px 16px 8px 56px;
+  border-top: 1px solid #edebe9;
+}
+
+.actions-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #605e5c;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f2f1;
+  border-top-color: #0078d4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.actions-error,
+.actions-empty {
+  color: #605e5c;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.action-status {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.action-status.succeeded {
+  background: #dff6dd;
+  color: #107c10;
+}
+
+.action-status.failed {
+  background: #fde7e9;
+  color: #d13438;
+}
+
+.action-status.skipped,
+.action-status.cancelled {
+  background: #f3f2f1;
+  color: #605e5c;
+}
+
+.action-name {
+  color: #323130;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

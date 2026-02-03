@@ -40,6 +40,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Fetch run actions/steps
+  if (message.type === 'FETCH_RUN_ACTIONS') {
+    const { environmentId, flowId, runId, tabId } = message;
+
+    fetchRunActions(tabId, environmentId, flowId, runId)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+
+    return true;
+  }
+
   return false;
 });
 
@@ -159,6 +170,100 @@ async function fetchRunsWithToken(tabId, environmentId, flowId) {
   } catch (error) {
     return { success: false, error: error.message };
   }
+}
+
+// Fetch run actions/steps
+async function fetchRunActions(tabId, environmentId, flowId, runId) {
+  const token = await getToken(tabId);
+
+  if (!token) {
+    return { success: false, error: 'Could not find auth token.' };
+  }
+
+  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/runs/${runId}?api-version=2016-11-01&$expand=properties/actions`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `API error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    const actions = data.properties?.actions || {};
+
+    // Convert actions object to sorted array
+    const actionsList = Object.entries(actions).map(([name, action]) => ({
+      name: name,
+      status: action.status,
+      startTime: action.startTime,
+      endTime: action.endTime,
+      code: action.code,
+      error: action.error
+    })).sort((a, b) => {
+      // Sort by start time
+      if (!a.startTime) return 1;
+      if (!b.startTime) return -1;
+      return new Date(a.startTime) - new Date(b.startTime);
+    });
+
+    return { success: true, actions: actionsList };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Extract token helper (reused by multiple fetch functions)
+async function getToken(tabId) {
+  const tokenResults = await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    world: 'MAIN',
+    func: () => {
+      try {
+        const flowScopes = ['flow.microsoft.com', 'service.flow.microsoft.com', 'api.flow.microsoft.com'];
+
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (!key) continue;
+          const keyLower = key.toLowerCase();
+          if (flowScopes.some(scope => keyLower.includes(scope))) {
+            const value = sessionStorage.getItem(key);
+            try {
+              const parsed = JSON.parse(value);
+              const token = parsed.secret || parsed.accessToken;
+              if (token && token.length > 100) return token;
+            } catch (e) {}
+          }
+        }
+
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          const keyLower = key.toLowerCase();
+          if (flowScopes.some(scope => keyLower.includes(scope))) {
+            const value = localStorage.getItem(key);
+            try {
+              const parsed = JSON.parse(value);
+              const token = parsed.secret || parsed.accessToken;
+              if (token && token.length > 100) return token;
+            } catch (e) {}
+          }
+        }
+
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+  });
+
+  return tokenResults?.[0]?.result;
 }
 
 // Clean up when tab is closed

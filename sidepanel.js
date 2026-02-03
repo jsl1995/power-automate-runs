@@ -90,6 +90,9 @@
     }
   }
 
+  // Cache for loaded actions
+  const actionsCache = new Map();
+
   // Render runs list
   function renderRuns(runs) {
     if (!runs || runs.length === 0) {
@@ -105,33 +108,136 @@
       const runId = run.name;
 
       return `
-        <div class="run-item" data-run-id="${runId}">
-          <div class="status-icon ${status.class}" title="${status.label}">
-            ${status.icon}
+        <div class="run-container" data-run-id="${runId}">
+          <div class="run-item">
+            <button class="expand-btn" title="Show steps">
+              <svg class="expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M4 6l4 4 4-4"/>
+              </svg>
+            </button>
+            <div class="status-icon ${status.class}" title="${status.label}">
+              ${status.icon}
+            </div>
+            <div class="run-details">
+              <div class="run-time">${formatRelativeTime(startTime)}</div>
+              <div class="run-meta">
+                <span class="run-status">${status.label}</span>
+                ${duration ? `<span class="run-duration">· ${duration}</span>` : ''}
+              </div>
+            </div>
+            <button class="open-btn" title="Open run details">
+              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M6 4l4 4-4 4"/>
+              </svg>
+            </button>
           </div>
-          <div class="run-details">
-            <div class="run-time">${formatRelativeTime(startTime)}</div>
-            <div class="run-meta">
-              <span class="run-status">${status.label}</span>
-              ${duration ? `<span class="run-duration">· ${duration}</span>` : ''}
+          <div class="actions-container hidden">
+            <div class="actions-loading">
+              <div class="spinner-small"></div>
+              Loading steps...
             </div>
           </div>
-          <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M6 4l4 4-4 4"/>
-          </svg>
         </div>
       `;
     }).join('');
 
-    // Add click handlers
-    runsListEl.querySelectorAll('.run-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const runId = item.dataset.runId;
+    // Add click handlers for expand buttons
+    runsListEl.querySelectorAll('.expand-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const container = btn.closest('.run-container');
+        const runId = container.dataset.runId;
+        toggleExpand(container, runId);
+      });
+    });
+
+    // Add click handlers for open buttons
+    runsListEl.querySelectorAll('.open-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const container = btn.closest('.run-container');
+        const runId = container.dataset.runId;
         openRun(runId);
       });
     });
 
     showState(runsListEl);
+  }
+
+  // Toggle expand/collapse for a run
+  async function toggleExpand(container, runId) {
+    const actionsContainer = container.querySelector('.actions-container');
+    const expandIcon = container.querySelector('.expand-icon');
+    const isExpanded = container.classList.contains('expanded');
+
+    if (isExpanded) {
+      // Collapse
+      container.classList.remove('expanded');
+      actionsContainer.classList.add('hidden');
+      expandIcon.style.transform = '';
+    } else {
+      // Expand
+      container.classList.add('expanded');
+      actionsContainer.classList.remove('hidden');
+      expandIcon.style.transform = 'rotate(-180deg)';
+
+      // Load actions if not cached
+      if (!actionsCache.has(runId)) {
+        await loadActions(container, runId);
+      } else {
+        renderActions(actionsContainer, actionsCache.get(runId));
+      }
+    }
+  }
+
+  // Load actions for a run
+  async function loadActions(container, runId) {
+    const actionsContainer = container.querySelector('.actions-container');
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'FETCH_RUN_ACTIONS',
+        environmentId: currentContext.environmentId,
+        flowId: currentContext.flowId,
+        runId: runId,
+        tabId: currentTabId
+      });
+
+      if (response && response.success) {
+        actionsCache.set(runId, response.actions);
+        renderActions(actionsContainer, response.actions);
+      } else {
+        actionsContainer.innerHTML = `
+          <div class="actions-error">
+            Failed to load steps
+          </div>
+        `;
+      }
+    } catch (error) {
+      actionsContainer.innerHTML = `
+        <div class="actions-error">
+          Failed to load steps
+        </div>
+      `;
+    }
+  }
+
+  // Render actions list
+  function renderActions(container, actions) {
+    if (!actions || actions.length === 0) {
+      container.innerHTML = '<div class="actions-empty">No steps found</div>';
+      return;
+    }
+
+    container.innerHTML = actions.map(action => {
+      const status = getStatusInfo(action.status);
+      return `
+        <div class="action-item">
+          <div class="action-status ${status.class}">${status.icon}</div>
+          <div class="action-name">${action.name}</div>
+        </div>
+      `;
+    }).join('');
   }
 
   // Check if current URL is a run page (not the editor)
