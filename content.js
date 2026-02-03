@@ -31,7 +31,48 @@
     });
   }
 
-  // Initial context send
+  // Inject a script into the page to make authenticated API calls
+  function injectFetchScript() {
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL('injected.js');
+    script.onload = () => script.remove();
+    (document.head || document.documentElement).appendChild(script);
+  }
+
+  // Listen for fetch results from injected script
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+
+    if (event.data.type === 'PA_RUNS_RESULT') {
+      chrome.runtime.sendMessage({
+        type: 'RUNS_FETCHED',
+        success: event.data.success,
+        runs: event.data.runs,
+        error: event.data.error
+      });
+    }
+  });
+
+  // Listen for fetch requests from background/sidepanel
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'GET_FLOW_CONTEXT') {
+      sendResponse(extractFlowContext());
+    }
+
+    if (message.type === 'FETCH_RUNS_FROM_PAGE') {
+      // Post message to injected script to make the fetch
+      window.postMessage({
+        type: 'PA_FETCH_RUNS',
+        environmentId: message.environmentId,
+        flowId: message.flowId
+      }, '*');
+    }
+
+    return true;
+  });
+
+  // Initial setup
+  injectFetchScript();
   sendFlowContext();
 
   // Listen for URL changes (Power Automate is an SPA)
@@ -51,12 +92,4 @@
 
   // Also use popstate for back/forward navigation
   window.addEventListener('popstate', sendFlowContext);
-
-  // Listen for messages from background/sidepanel
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'GET_FLOW_CONTEXT') {
-      sendResponse(extractFlowContext());
-    }
-    return true;
-  });
 })();

@@ -15,6 +15,7 @@
 
   // Current state
   let currentContext = null;
+  let currentTabId = null;
   let isLoading = false;
 
   // Show a specific state
@@ -157,7 +158,8 @@
       const response = await chrome.runtime.sendMessage({
         type: 'FETCH_RUNS',
         environmentId: currentContext.environmentId,
-        flowId: currentContext.flowId
+        flowId: currentContext.flowId,
+        tabId: currentTabId
       });
 
       if (response.success) {
@@ -180,6 +182,8 @@
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab) return null;
+
+      currentTabId = tab.id;
 
       const response = await chrome.runtime.sendMessage({
         type: 'GET_CONTEXT_FOR_TAB',
@@ -208,6 +212,7 @@
     if (message.type === 'CONTEXT_UPDATED') {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0] && tabs[0].id === message.tabId) {
+          currentTabId = tabs[0].id;
           currentContext = message.context;
           if (currentContext) {
             loadRuns();

@@ -3,8 +3,12 @@
 // Store current flow context per tab
 const tabContexts = new Map();
 
-// Listen for flow context updates from content script
+// Store pending fetch callbacks
+const pendingFetches = new Map();
+
+// Listen for messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Flow context update from content script
   if (message.type === 'FLOW_CONTEXT' && sender.tab) {
     const tabId = sender.tab.id;
 
@@ -24,16 +28,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   }
 
+  // Get context for a specific tab
   if (message.type === 'GET_CONTEXT_FOR_TAB') {
     sendResponse(tabContexts.get(message.tabId) || null);
     return true;
   }
 
+  // Fetch runs request from sidepanel
   if (message.type === 'FETCH_RUNS') {
-    fetchRuns(message.environmentId, message.flowId)
-      .then(runs => sendResponse({ success: true, runs }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+    const { environmentId, flowId, tabId } = message;
+
+    // Send request to content script to fetch via injected script
+    chrome.tabs.sendMessage(tabId, {
+      type: 'FETCH_RUNS_FROM_PAGE',
+      environmentId: environmentId,
+      flowId: flowId
+    }).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+
+    // Store the callback to respond when we get results
+    pendingFetches.set(tabId, sendResponse);
     return true; // Keep channel open for async response
+  }
+
+  // Runs fetched from content script (via injected script)
+  if (message.type === 'RUNS_FETCHED' && sender.tab) {
+    const tabId = sender.tab.id;
+    const callback = pendingFetches.get(tabId);
+
+    if (callback) {
+      callback({
+        success: message.success,
+        runs: message.runs,
+        error: message.error
+      });
+      pendingFetches.delete(tabId);
+    }
   }
 
   return true;
@@ -42,32 +73,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Clean up when tab is closed
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabContexts.delete(tabId);
+  pendingFetches.delete(tabId);
 });
 
 // Enable side panel when clicking the action button
 chrome.action.onClicked.addListener((tab) => {
   chrome.sidePanel.open({ tabId: tab.id });
 });
-
-// Fetch runs from Power Automate API
-async function fetchRuns(environmentId, flowId) {
-  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/runs?api-version=2016-11-01&$top=10`;
-
-  const response = await fetch(apiUrl, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json'
-    }
-  });
-
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new Error('Not authenticated. Please sign in to Power Automate.');
-    }
-    throw new Error(`API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.value || [];
-}
