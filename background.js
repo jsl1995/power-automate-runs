@@ -51,6 +51,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Fetch flow details (including solution info)
+  if (message.type === 'FETCH_FLOW_DETAILS') {
+    const { environmentId, flowId, tabId } = message;
+
+    fetchFlowDetails(tabId, environmentId, flowId)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+
+    return true;
+  }
+
   return false;
 });
 
@@ -275,3 +286,84 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.action.onClicked.addListener((tab) => {
   chrome.sidePanel.open({ tabId: tab.id });
 });
+
+// Fetch flow details including solution info
+async function fetchFlowDetails(tabId, environmentId, flowId) {
+  const token = await getToken(tabId);
+
+  if (!token) {
+    return { success: false, error: 'Could not find auth token.' };
+  }
+
+  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}?api-version=2016-11-01`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `API error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    
+    // Extract solution ID from flow properties
+    // Solution flows have various places where solution info might be stored
+    let solutionId = null;
+    
+    // Check for solution property at root level
+    if (data.properties?.solution?.id) {
+      solutionId = data.properties.solution.id;
+    }
+
+    // Check for solution property as solutionId directly
+    if (!solutionId && data.properties?.solutionId) {
+      solutionId = data.properties.solutionId;
+    }
+    
+    // Check for flowSolutionId property
+    if (!solutionId && data.properties?.flowSolutionId) {
+      solutionId = data.properties.flowSolutionId;
+    }
+    
+    // Check for solution reference in flow properties
+    if (!solutionId && data.properties?.environment?.workflowSolutions) {
+      const solutions = data.properties.environment.workflowSolutions;
+      if (solutions && solutions.length > 0) {
+        solutionId = solutions[0].solutionId;
+      }
+    }
+    
+    // Alternative: check workflowReferences for solution info
+    if (!solutionId && data.properties?.referencedResources) {
+      for (const resource of data.properties.referencedResources) {
+        if (resource.solution) {
+          solutionId = resource.solution.id;
+          break;
+        }
+      }
+    }
+    
+    // Alternative: check the definition metadata
+    if (!solutionId && data.properties?.definition?.metadata?.solutionId) {
+      solutionId = data.properties.definition.metadata.solutionId;
+    }
+
+    return { 
+      success: true, 
+      flowDetails: {
+        name: data.name,
+        displayName: data.properties?.displayName,
+        solutionId: solutionId,
+        properties: data.properties
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
