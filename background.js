@@ -45,44 +45,81 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Get auth token from page and fetch runs
 async function fetchRunsWithToken(tabId, environmentId, flowId) {
-  // Extract token from page's session storage
+  // Extract token from page's storage - look for Flow API token specifically
   const tokenResults = await chrome.scripting.executeScript({
     target: { tabId: tabId },
     world: 'MAIN',
     func: () => {
-      // Power Automate stores tokens in sessionStorage
-      // Look for the flow API token
       try {
-        // Try to find token in sessionStorage
+        // MSAL stores tokens with keys containing the scope/resource
+        // Look for tokens scoped to flow.microsoft.com or service.flow.microsoft.com
+        const flowScopes = ['flow.microsoft.com', 'service.flow.microsoft.com', 'api.flow.microsoft.com'];
+
+        // Check sessionStorage first (MSAL often uses this)
         for (let i = 0; i < sessionStorage.length; i++) {
           const key = sessionStorage.key(i);
-          if (key && key.includes('flow.microsoft.com')) {
+          if (!key) continue;
+
+          const keyLower = key.toLowerCase();
+          const isFlowToken = flowScopes.some(scope => keyLower.includes(scope));
+          const isMsalToken = keyLower.includes('accesstoken') || keyLower.includes('access_token');
+
+          if (isFlowToken || isMsalToken) {
             const value = sessionStorage.getItem(key);
             try {
               const parsed = JSON.parse(value);
-              if (parsed.accessToken || parsed.secret) {
-                return parsed.accessToken || parsed.secret;
+              // MSAL format: { secret: "token..." } or { accessToken: "token..." }
+              const token = parsed.secret || parsed.accessToken || parsed.access_token;
+              if (token && typeof token === 'string' && token.length > 100) {
+                // Verify it's a Flow API token by checking scope in key
+                if (flowScopes.some(scope => keyLower.includes(scope))) {
+                  return token;
+                }
               }
-            } catch (e) {
-              // Not JSON, skip
-            }
+            } catch (e) {}
           }
         }
 
-        // Try localStorage as fallback
+        // Check localStorage
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key && (key.includes('msal') || key.includes('flow'))) {
+          if (!key) continue;
+
+          const keyLower = key.toLowerCase();
+          const isFlowToken = flowScopes.some(scope => keyLower.includes(scope));
+          const isMsalToken = keyLower.includes('accesstoken') || keyLower.includes('access_token');
+
+          if (isFlowToken || isMsalToken) {
             const value = localStorage.getItem(key);
             try {
               const parsed = JSON.parse(value);
-              if (parsed.accessToken || parsed.secret) {
-                return parsed.accessToken || parsed.secret;
+              const token = parsed.secret || parsed.accessToken || parsed.access_token;
+              if (token && typeof token === 'string' && token.length > 100) {
+                if (flowScopes.some(scope => keyLower.includes(scope))) {
+                  return token;
+                }
               }
-            } catch (e) {
-              // Not JSON, skip
-            }
+            } catch (e) {}
           }
+        }
+
+        // Fallback: look for any valid-looking access token
+        const allStorage = { ...Object.fromEntries(
+          [...Array(sessionStorage.length)].map((_, i) => [sessionStorage.key(i), sessionStorage.getItem(sessionStorage.key(i))])
+        ), ...Object.fromEntries(
+          [...Array(localStorage.length)].map((_, i) => [localStorage.key(i), localStorage.getItem(localStorage.key(i))])
+        )};
+
+        for (const [key, value] of Object.entries(allStorage)) {
+          if (!value) continue;
+          try {
+            const parsed = JSON.parse(value);
+            const token = parsed.secret || parsed.accessToken;
+            if (token && typeof token === 'string' && token.length > 500) {
+              // Long tokens are likely JWT access tokens
+              return token;
+            }
+          } catch (e) {}
         }
 
         return null;
