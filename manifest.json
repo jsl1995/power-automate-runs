@@ -12,7 +12,7 @@
   "host_permissions": [
     "https://make.powerautomate.com/*",
     "https://make.powerapps.com/*",
-    "https://*.api.flow.microsoft.com/*"
+    "https://api.flow.microsoft.com/*"
   ],
   "background": {
     "service_worker": "background.js"

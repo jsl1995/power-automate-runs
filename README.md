@@ -6,6 +6,20 @@
 
 A Chrome extension that displays run history for Power Automate Cloud Flows directly from the flow designer.
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/screenshot1.png" alt="Run History Panel" width="600">
+</p>
+
+<p align="center">
+  <img src="screenshots/screenshot2.png" alt="Expanded Run Details" width="600">
+</p>
+
+<p align="center">
+  <img src="screenshots/screenshot3.png" alt="Step Results" width="600">
+</p>
+
 ## Features
 
 - **Side panel UI** - View run history alongside the flow designer
