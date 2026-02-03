@@ -1,4 +1,4 @@
-// Content script to detect Power Automate flow context and communicate with background
+// Content script to detect Power Automate flow context and handle API calls
 
 (function() {
   'use strict';
@@ -6,8 +6,6 @@
   // Extract flow context from URL
   function extractFlowContext() {
     const url = window.location.href;
-
-    // Pattern: https://make.powerautomate.com/environments/{envId}/flows/{flowId}/...
     const match = url.match(/\/environments\/([^/]+)\/flows\/([^/?]+)/);
 
     if (match) {
@@ -18,61 +16,64 @@
         url: url
       };
     }
-
     return null;
   }
 
   // Send flow context to background script
   function sendFlowContext() {
-    const context = extractFlowContext();
-    chrome.runtime.sendMessage({
-      type: 'FLOW_CONTEXT',
-      context: context
-    });
-  }
-
-  // Inject a script into the page to make authenticated API calls
-  function injectFetchScript() {
-    const script = document.createElement('script');
-    script.src = chrome.runtime.getURL('injected.js');
-    script.onload = () => script.remove();
-    (document.head || document.documentElement).appendChild(script);
-  }
-
-  // Listen for fetch results from injected script
-  window.addEventListener('message', (event) => {
-    if (event.source !== window) return;
-
-    if (event.data.type === 'PA_RUNS_RESULT') {
+    try {
+      const context = extractFlowContext();
       chrome.runtime.sendMessage({
-        type: 'RUNS_FETCHED',
-        success: event.data.success,
-        runs: event.data.runs,
-        error: event.data.error
-      });
+        type: 'FLOW_CONTEXT',
+        context: context
+      }).catch(() => {});
+    } catch (e) {
+      // Extension context may be invalidated
     }
-  });
+  }
 
-  // Listen for fetch requests from background/sidepanel
+  // Fetch runs using page's fetch (has auth cookies)
+  async function fetchRunsFromPage(environmentId, flowId) {
+    const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/runs?api-version=2016-11-01&$top=10`;
+
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.value || [];
+  }
+
+  // Listen for messages from sidepanel/background
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'GET_FLOW_CONTEXT') {
       sendResponse(extractFlowContext());
+      return false;
     }
 
-    if (message.type === 'FETCH_RUNS_FROM_PAGE') {
-      // Post message to injected script to make the fetch
-      window.postMessage({
-        type: 'PA_FETCH_RUNS',
-        environmentId: message.environmentId,
-        flowId: message.flowId
-      }, '*');
+    if (message.type === 'FETCH_RUNS_REQUEST') {
+      fetchRunsFromPage(message.environmentId, message.flowId)
+        .then(runs => {
+          sendResponse({ success: true, runs: runs });
+        })
+        .catch(error => {
+          sendResponse({ success: false, error: error.message });
+        });
+      return true; // Keep channel open for async response
     }
 
-    return true;
+    return false;
   });
 
-  // Initial setup
-  injectFetchScript();
+  // Initial context send
   sendFlowContext();
 
   // Listen for URL changes (Power Automate is an SPA)
@@ -85,11 +86,9 @@
     }
   });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
 
-  // Also use popstate for back/forward navigation
   window.addEventListener('popstate', sendFlowContext);
 })();

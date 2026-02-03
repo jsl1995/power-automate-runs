@@ -139,16 +139,12 @@
     const baseUrl = origin || 'https://make.powerautomate.com';
     const runUrl = `${baseUrl}/environments/${environmentId}/flows/${flowId}/runs/${runId}`;
 
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        chrome.tabs.update(tabs[0].id, { url: runUrl });
-      }
-    });
+    chrome.tabs.update(currentTabId, { url: runUrl });
   }
 
-  // Fetch and display runs
+  // Fetch runs via background script
   async function loadRuns() {
-    if (!currentContext || isLoading) return;
+    if (!currentContext || !currentTabId || isLoading) return;
 
     isLoading = true;
     refreshBtn.classList.add('spinning');
@@ -162,10 +158,10 @@
         tabId: currentTabId
       });
 
-      if (response.success) {
+      if (response && response.success) {
         renderRuns(response.runs);
       } else {
-        errorMessageEl.textContent = response.error || 'Failed to load runs';
+        errorMessageEl.textContent = response?.error || 'Failed to load runs';
         showState(errorEl);
       }
     } catch (error) {
@@ -177,62 +173,55 @@
     }
   }
 
-  // Get current tab context
-  async function getCurrentContext() {
+  // Get current tab and context
+  async function init() {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab) return null;
+      if (!tab) {
+        showState(noFlowEl);
+        return;
+      }
 
       currentTabId = tab.id;
 
-      const response = await chrome.runtime.sendMessage({
+      // Get context from background
+      const context = await chrome.runtime.sendMessage({
         type: 'GET_CONTEXT_FOR_TAB',
         tabId: tab.id
       });
 
-      return response;
-    } catch {
-      return null;
-    }
-  }
-
-  // Initialize
-  async function init() {
-    currentContext = await getCurrentContext();
-
-    if (currentContext) {
-      loadRuns();
-    } else {
+      if (context) {
+        currentContext = context;
+        loadRuns();
+      } else {
+        showState(noFlowEl);
+      }
+    } catch (error) {
       showState(noFlowEl);
     }
   }
 
   // Listen for context updates
   chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'CONTEXT_UPDATED') {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0] && tabs[0].id === message.tabId) {
-          currentTabId = tabs[0].id;
-          currentContext = message.context;
-          if (currentContext) {
-            loadRuns();
-          } else {
-            showState(noFlowEl);
-          }
-        }
-      });
+    if (message.type === 'CONTEXT_UPDATED' && message.tabId === currentTabId) {
+      currentContext = message.context;
+      if (currentContext) {
+        loadRuns();
+      } else {
+        showState(noFlowEl);
+      }
     }
   });
 
   // Event listeners
   refreshBtn.addEventListener('click', () => {
-    if (currentContext) {
+    if (currentContext && currentTabId) {
       loadRuns();
     }
   });
 
   retryBtn.addEventListener('click', () => {
-    if (currentContext) {
+    if (currentContext && currentTabId) {
       loadRuns();
     }
   });

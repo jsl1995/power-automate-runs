@@ -6,7 +6,8 @@
   "permissions": [
     "activeTab",
     "sidePanel",
-    "storage"
+    "storage",
+    "scripting"
   ],
   "host_permissions": [
     "https://make.powerautomate.com/*",
@@ -36,14 +37,5 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": ["injected.js"],
-      "matches": [
-        "https://make.powerautomate.com/*",
-        "https://make.powerapps.com/*"
-      ]
-    }
-  ]
+  }
 }
