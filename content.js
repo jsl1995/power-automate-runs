@@ -14,6 +14,7 @@
       return {
         environmentId: match[1],
         flowId: match[2],
+        origin: window.location.origin,
         url: url
       };
     }

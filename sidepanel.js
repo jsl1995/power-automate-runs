@@ -134,8 +134,9 @@
   function openRun(runId) {
     if (!currentContext) return;
 
-    const { environmentId, flowId } = currentContext;
-    const runUrl = `https://make.powerautomate.com/environments/${environmentId}/flows/${flowId}/runs/${runId}`;
+    const { environmentId, flowId, origin } = currentContext;
+    const baseUrl = origin || 'https://make.powerautomate.com';
+    const runUrl = `${baseUrl}/environments/${environmentId}/flows/${flowId}/runs/${runId}`;
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
