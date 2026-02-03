@@ -164,10 +164,9 @@ h1 {
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  cursor: pointer;
+  cursor: default;
   transition: background 0.1s;
   gap: 12px;
-  border-bottom: 1px solid #f3f2f1;
 }
 
 .run-item:hover {

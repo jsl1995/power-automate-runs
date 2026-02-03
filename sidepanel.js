@@ -161,6 +161,18 @@
       });
     });
 
+    // Add double-click handler on run items to open run details
+    runsListEl.querySelectorAll('.run-item').forEach(item => {
+      item.addEventListener('dblclick', (e) => {
+        // Ignore if clicking on expand button
+        if (e.target.closest('.expand-btn')) return;
+
+        const container = item.closest('.run-container');
+        const runId = container.dataset.runId;
+        openRun(runId);
+      });
+    });
+
     showState(runsListEl);
   }
 
