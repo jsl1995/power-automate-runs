@@ -297,8 +297,16 @@
   // Open flow in Power Apps
   function openInPowerApps() {
     if (!currentContext || !currentTabId) return;
-    const { environmentId, flowId } = currentContext;
-    const url = `https://make.powerapps.com/environments/${environmentId}/flows/${flowId}`;
+    const { environmentId, flowId, solutionId } = currentContext;
+
+    let url;
+    if (solutionId) {
+      // Use cloudflows URL pattern when we have a solution ID
+      url = `https://make.powerapps.com/environments/${environmentId}/solutions/${solutionId}/objects/cloudflows/${flowId}/view`;
+    } else {
+      // Fallback to standard flows URL
+      url = `https://make.powerapps.com/environments/${environmentId}/flows/${flowId}`;
+    }
     chrome.tabs.update(currentTabId, { url: url });
   }
 

@@ -7,21 +7,37 @@
   function extractFlowContext() {
     const url = window.location.href;
 
-    // Match multiple URL patterns:
-    // - /environments/{envId}/flows/{flowId} (Power Automate)
-    // - /environments/{envId}/solutions/{solutionId}/flows/{flowId} (Power Apps)
-    // - /environments/{envId}/solutions/{solutionId}/objects/cloudflows/{flowId} (Power Apps solution view)
-    let match = url.match(/\/environments\/([^/]+)(?:\/solutions\/[^/]+)?\/flows\/([^/?]+)/);
+    // Extract environment ID (always present)
+    const envMatch = url.match(/\/environments\/([^/]+)/);
+    if (!envMatch) return null;
 
-    if (!match) {
-      // Try Power Apps cloudflows pattern
-      match = url.match(/\/environments\/([^/]+)\/solutions\/[^/]+\/objects\/cloudflows\/([^/?]+)/);
+    const environmentId = envMatch[1];
+    let flowId = null;
+    let solutionId = null;
+
+    // Try to extract solution ID if present
+    const solutionMatch = url.match(/\/solutions\/([^/]+)/);
+    if (solutionMatch) {
+      solutionId = solutionMatch[1];
     }
 
-    if (match) {
+    // Try different flow ID patterns:
+    // - /flows/{flowId} (Power Automate)
+    // - /objects/cloudflows/{flowId} (Power Apps solution view)
+    let flowMatch = url.match(/\/flows\/([^/?]+)/);
+    if (!flowMatch) {
+      flowMatch = url.match(/\/objects\/cloudflows\/([^/?]+)/);
+    }
+
+    if (flowMatch) {
+      flowId = flowMatch[1];
+    }
+
+    if (flowId) {
       return {
-        environmentId: match[1],
-        flowId: match[2],
+        environmentId: environmentId,
+        flowId: flowId,
+        solutionId: solutionId,
         origin: window.location.origin,
         url: url
       };
