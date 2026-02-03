@@ -13,22 +13,9 @@
 
     const environmentId = envMatch[1];
     let flowId = null;
-    let solutionId = null;
 
-    // Try to extract solution ID if present
-    const solutionMatch = url.match(/\/solutions\/([^/]+)/);
-    if (solutionMatch) {
-      solutionId = solutionMatch[1];
-    }
-
-    // Try different flow ID patterns:
-    // - /flows/{flowId} (Power Automate)
-    // - /objects/cloudflows/{flowId} (Power Apps solution view)
-    let flowMatch = url.match(/\/flows\/([^/?]+)/);
-    if (!flowMatch) {
-      flowMatch = url.match(/\/objects\/cloudflows\/([^/?]+)/);
-    }
-
+    // Match /flows/{flowId} pattern
+    const flowMatch = url.match(/\/flows\/([^/?]+)/);
     if (flowMatch) {
       flowId = flowMatch[1];
     }
@@ -37,7 +24,6 @@
       return {
         environmentId: environmentId,
         flowId: flowId,
-        solutionId: solutionId,
         origin: window.location.origin,
         url: url
       };

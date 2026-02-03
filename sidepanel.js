@@ -14,37 +14,12 @@
   const retryBtn = document.getElementById('retry-btn');
   const backToEditorEl = document.getElementById('back-to-editor');
   const backBtn = document.getElementById('back-btn');
-  const openPowerAppsBtn = document.getElementById('open-powerapps');
-  const openPowerAutomateBtn = document.getElementById('open-powerautomate');
 
   // Current state
   let currentContext = null;
   let currentTabId = null;
   let isLoading = false;
   let flowEditorUrl = null; // Store the flow editor URL to return to
-  let savedSolutionId = null; // Preserve solution ID across navigation
-  let hasFetchedFlowDetails = false; // Track if we've fetched flow details for current flow
-
-  // Fetch solution ID from API if not in URL
-  async function fetchSolutionIdFromApi() {
-    if (!currentContext || !currentTabId) return null;
-    
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'FETCH_FLOW_DETAILS',
-        environmentId: currentContext.environmentId,
-        flowId: currentContext.flowId,
-        tabId: currentTabId
-      });
-
-      if (response && response.success && response.flowDetails?.solutionId) {
-        return response.flowDetails.solutionId;
-      }
-    } catch (error) {
-      console.error('Failed to fetch flow details:', error);
-    }
-    return null;
-  }
 
   // Show a specific state
   function showState(state) {
@@ -303,57 +278,18 @@
   function openRun(runId) {
     if (!currentContext) return;
 
-    const { environmentId, flowId, origin, solutionId } = currentContext;
+    const { environmentId, flowId, origin } = currentContext;
     const baseUrl = origin || 'https://make.powerautomate.com';
-    const effectiveSolutionId = solutionId || savedSolutionId;
-
-    let runUrl;
-    if (baseUrl.includes('powerapps.com')) {
-      // Power Apps uses cloudflows pattern
-      if (effectiveSolutionId) {
-        runUrl = `${baseUrl}/environments/${environmentId}/solutions/${effectiveSolutionId}/objects/cloudflows/${flowId}/runs/${runId}`;
-      } else {
-        runUrl = `${baseUrl}/environments/${environmentId}/cloudflows/${flowId}/runs/${runId}`;
-      }
-    } else {
-      // Power Automate uses flows pattern
-      runUrl = `${baseUrl}/environments/${environmentId}/flows/${flowId}/runs/${runId}`;
-    }
+    const runUrl = `${baseUrl}/environments/${environmentId}/flows/${flowId}/runs/${runId}`;
 
     chrome.tabs.update(currentTabId, { url: runUrl });
   }
 
-  // Return to flow editor (original site)
+  // Return to flow editor
   function returnToEditor() {
     if (flowEditorUrl && currentTabId) {
       chrome.tabs.update(currentTabId, { url: flowEditorUrl });
     }
-  }
-
-  // Open flow in Power Apps
-  function openInPowerApps() {
-    if (!currentContext || !currentTabId) return;
-    const { environmentId, flowId, solutionId } = currentContext;
-
-    // Use saved solution ID if current context doesn't have one
-    const effectiveSolutionId = solutionId || savedSolutionId;
-
-    if (effectiveSolutionId) {
-      // Use cloudflows URL pattern with solution context
-      const url = `https://make.powerapps.com/environments/${environmentId}/solutions/${effectiveSolutionId}/objects/cloudflows/${flowId}/view`;
-      chrome.tabs.update(currentTabId, { url: url });
-    } else {
-      // No solution ID available - can't navigate to Power Apps for this flow
-      alert('Cannot open in Power Apps: This flow is not part of a solution. Power Apps requires a solution context to view cloud flows.');
-    }
-  }
-
-  // Open flow in Power Automate
-  function openInPowerAutomate() {
-    if (!currentContext || !currentTabId) return;
-    const { environmentId, flowId } = currentContext;
-    const url = `https://make.powerautomate.com/environments/${environmentId}/flows/${flowId}`;
-    chrome.tabs.update(currentTabId, { url: url });
   }
 
   // Fetch runs via background script
@@ -365,15 +301,6 @@
     showState(loadingEl);
 
     try {
-      // If we don't have a solution ID yet, try to fetch it from the API
-      if (!savedSolutionId && !currentContext.solutionId && !hasFetchedFlowDetails) {
-        hasFetchedFlowDetails = true;
-        const apiSolutionId = await fetchSolutionIdFromApi();
-        if (apiSolutionId) {
-          savedSolutionId = apiSolutionId;
-        }
-      }
-
       const response = await chrome.runtime.sendMessage({
         type: 'FETCH_RUNS',
         environmentId: currentContext.environmentId,
@@ -414,15 +341,7 @@
       });
 
       if (context) {
-        // Check if flow changed - reset fetched flag
-        if (!currentContext || currentContext.flowId !== context.flowId) {
-          hasFetchedFlowDetails = false;
-        }
         currentContext = context;
-        // Save solution ID if present (preserve across navigation)
-        if (context.solutionId) {
-          savedSolutionId = context.solutionId;
-        }
         // Always store/update the editor URL from context
         flowEditorUrl = getFlowEditorUrl(context);
         updateBackButton();
@@ -438,16 +357,8 @@
   // Listen for context updates
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'CONTEXT_UPDATED' && message.tabId === currentTabId) {
-      // Check if flow changed - reset fetched flag
-      if (!currentContext || currentContext.flowId !== message.context?.flowId) {
-        hasFetchedFlowDetails = false;
-      }
       currentContext = message.context;
       if (currentContext) {
-        // Save solution ID if present (preserve across navigation)
-        if (currentContext.solutionId) {
-          savedSolutionId = currentContext.solutionId;
-        }
         // Always keep the editor URL updated
         flowEditorUrl = getFlowEditorUrl(currentContext);
         updateBackButton();
@@ -473,8 +384,6 @@
   });
 
   backBtn.addEventListener('click', returnToEditor);
-  openPowerAppsBtn.addEventListener('click', openInPowerApps);
-  openPowerAutomateBtn.addEventListener('click', openInPowerAutomate);
 
   // Start
   init();

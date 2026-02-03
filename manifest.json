@@ -11,7 +11,6 @@
   ],
   "host_permissions": [
     "https://make.powerautomate.com/*",
-    "https://make.powerapps.com/*",
     "https://*.api.flow.microsoft.com/*"
   ],
   "background": {
@@ -20,8 +19,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://make.powerautomate.com/*",
-        "https://make.powerapps.com/*"
+        "https://make.powerautomate.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
