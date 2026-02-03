@@ -18,12 +18,30 @@
     </header>
 
     <div id="back-to-editor" class="back-to-editor hidden">
-      <button id="back-btn" class="back-btn">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M11 2L5 8l6 6V2z"/>
-        </svg>
-        Return to Flow Editor
-      </button>
+      <div class="back-row">
+        <button id="back-btn" class="back-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11 2L5 8l6 6V2z"/>
+          </svg>
+          Return to Flow Editor
+        </button>
+        <div class="platform-buttons">
+          <button id="open-powerapps" class="platform-btn" title="Open in Power Apps">
+            <svg width="20" height="20" viewBox="0 0 96 96" fill="none">
+              <path d="M48 12L84 36V60L48 84L12 60V36L48 12Z" fill="#742774"/>
+              <path d="M48 12L84 36L48 48L12 36L48 12Z" fill="#A4509A"/>
+              <path d="M48 48V84L12 60V36L48 48Z" fill="#8C3A87"/>
+            </svg>
+          </button>
+          <button id="open-powerautomate" class="platform-btn" title="Open in Power Automate">
+            <svg width="20" height="20" viewBox="0 0 96 96" fill="none">
+              <path d="M24 24H72L60 48L72 72H24L36 48L24 24Z" fill="#0066FF"/>
+              <path d="M24 24H72L60 48H36L24 24Z" fill="#3B99FC"/>
+              <path d="M36 48L24 72H72L60 48H36Z" fill="#0053CE"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
 
     <div id="content">

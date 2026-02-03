@@ -14,6 +14,8 @@
   const retryBtn = document.getElementById('retry-btn');
   const backToEditorEl = document.getElementById('back-to-editor');
   const backBtn = document.getElementById('back-btn');
+  const openPowerAppsBtn = document.getElementById('open-powerapps');
+  const openPowerAutomateBtn = document.getElementById('open-powerautomate');
 
   // Current state
   let currentContext = null;
@@ -285,11 +287,27 @@
     chrome.tabs.update(currentTabId, { url: runUrl });
   }
 
-  // Return to flow editor
+  // Return to flow editor (original site)
   function returnToEditor() {
     if (flowEditorUrl && currentTabId) {
       chrome.tabs.update(currentTabId, { url: flowEditorUrl });
     }
+  }
+
+  // Open flow in Power Apps
+  function openInPowerApps() {
+    if (!currentContext || !currentTabId) return;
+    const { environmentId, flowId } = currentContext;
+    const url = `https://make.powerapps.com/environments/${environmentId}/flows/${flowId}`;
+    chrome.tabs.update(currentTabId, { url: url });
+  }
+
+  // Open flow in Power Automate
+  function openInPowerAutomate() {
+    if (!currentContext || !currentTabId) return;
+    const { environmentId, flowId } = currentContext;
+    const url = `https://make.powerautomate.com/environments/${environmentId}/flows/${flowId}`;
+    chrome.tabs.update(currentTabId, { url: url });
   }
 
   // Fetch runs via background script
@@ -384,6 +402,8 @@
   });
 
   backBtn.addEventListener('click', returnToEditor);
+  openPowerAppsBtn.addEventListener('click', openInPowerApps);
+  openPowerAutomateBtn.addEventListener('click', openInPowerAutomate);
 
   // Start
   init();

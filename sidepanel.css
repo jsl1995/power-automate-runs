@@ -126,11 +126,17 @@ h1 {
   border-bottom: 1px solid #edebe9;
 }
 
+.back-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .back-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  flex: 1;
   padding: 8px 12px;
   border: 1px solid #0078d4;
   border-radius: 4px;
@@ -154,6 +160,33 @@ h1 {
 
 .back-btn svg {
   flex-shrink: 0;
+}
+
+.platform-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.platform-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+}
+
+.platform-btn:hover {
+  border-color: #0078d4;
+  background: #f0f6ff;
+}
+
+.platform-btn:active {
+  background: #e0efff;
 }
 
 #runs-list {
