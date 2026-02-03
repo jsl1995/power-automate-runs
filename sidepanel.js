@@ -263,14 +263,8 @@
   // Get the flow editor URL from context
   function getFlowEditorUrl(context) {
     if (!context) return null;
-    const { environmentId, flowId, solutionId, origin } = context;
+    const { environmentId, flowId, origin } = context;
     const baseUrl = origin || 'https://make.powerautomate.com';
-    const effectiveSolutionId = solutionId || savedSolutionId;
-
-    if (effectiveSolutionId && baseUrl.includes('powerapps.com')) {
-      // Use cloudflows URL pattern for Power Apps with /view suffix
-      return `${baseUrl}/environments/${environmentId}/solutions/${effectiveSolutionId}/objects/cloudflows/${flowId}/view`;
-    }
     return `${baseUrl}/environments/${environmentId}/flows/${flowId}`;
   }
 
@@ -293,8 +287,8 @@
 
     let runUrl;
     if (effectiveSolutionId && baseUrl.includes('powerapps.com')) {
-      // Use cloudflows URL pattern for Power Apps with /view suffix
-      runUrl = `${baseUrl}/environments/${environmentId}/solutions/${effectiveSolutionId}/objects/cloudflows/${flowId}/runs/${runId}/view`;
+      // Use cloudflows URL pattern for Power Apps
+      runUrl = `${baseUrl}/environments/${environmentId}/solutions/${effectiveSolutionId}/objects/cloudflows/${flowId}/runs/${runId}`;
     } else {
       // Standard flows URL for Power Automate
       runUrl = `${baseUrl}/environments/${environmentId}/flows/${flowId}/runs/${runId}`;
