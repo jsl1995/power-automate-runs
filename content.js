@@ -6,7 +6,11 @@
   // Extract flow context from URL
   function extractFlowContext() {
     const url = window.location.href;
-    const match = url.match(/\/environments\/([^/]+)\/flows\/([^/?]+)/);
+
+    // Match both patterns:
+    // - /environments/{envId}/flows/{flowId} (Power Automate)
+    // - /environments/{envId}/solutions/{solutionId}/flows/{flowId} (Power Apps)
+    const match = url.match(/\/environments\/([^/]+)(?:\/solutions\/[^/]+)?\/flows\/([^/?]+)/);
 
     if (match) {
       return {
