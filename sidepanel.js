@@ -12,11 +12,14 @@
   const noRunsEl = document.getElementById('no-runs');
   const refreshBtn = document.getElementById('refresh-btn');
   const retryBtn = document.getElementById('retry-btn');
+  const backToEditorEl = document.getElementById('back-to-editor');
+  const backBtn = document.getElementById('back-btn');
 
   // Current state
   let currentContext = null;
   let currentTabId = null;
   let isLoading = false;
+  let flowEditorUrl = null; // Store the flow editor URL to return to
 
   // Show a specific state
   function showState(state) {
@@ -131,15 +134,49 @@
     showState(runsListEl);
   }
 
+  // Check if current URL is a run page (not the editor)
+  function isRunPage(url) {
+    return url && url.includes('/runs/');
+  }
+
+  // Get the flow editor URL from context
+  function getFlowEditorUrl(context) {
+    if (!context) return null;
+    const { environmentId, flowId, origin } = context;
+    const baseUrl = origin || 'https://make.powerautomate.com';
+    return `${baseUrl}/environments/${environmentId}/flows/${flowId}`;
+  }
+
+  // Update back button visibility
+  function updateBackButton() {
+    if (flowEditorUrl && currentContext && isRunPage(currentContext.url)) {
+      backToEditorEl.classList.remove('hidden');
+    } else {
+      backToEditorEl.classList.add('hidden');
+    }
+  }
+
   // Open run in current tab
   function openRun(runId) {
     if (!currentContext) return;
+
+    // Store the editor URL before navigating to a run
+    if (!isRunPage(currentContext.url)) {
+      flowEditorUrl = currentContext.url;
+    }
 
     const { environmentId, flowId, origin } = currentContext;
     const baseUrl = origin || 'https://make.powerautomate.com';
     const runUrl = `${baseUrl}/environments/${environmentId}/flows/${flowId}/runs/${runId}`;
 
     chrome.tabs.update(currentTabId, { url: runUrl });
+  }
+
+  // Return to flow editor
+  function returnToEditor() {
+    if (flowEditorUrl && currentTabId) {
+      chrome.tabs.update(currentTabId, { url: flowEditorUrl });
+    }
   }
 
   // Fetch runs via background script
@@ -192,6 +229,11 @@
 
       if (context) {
         currentContext = context;
+        // Store the editor URL if we're on the editor (not a run page)
+        if (!isRunPage(context.url)) {
+          flowEditorUrl = context.url;
+        }
+        updateBackButton();
         loadRuns();
       } else {
         showState(noFlowEl);
@@ -206,8 +248,14 @@
     if (message.type === 'CONTEXT_UPDATED' && message.tabId === currentTabId) {
       currentContext = message.context;
       if (currentContext) {
+        // Update stored editor URL if we're on the editor
+        if (!isRunPage(currentContext.url)) {
+          flowEditorUrl = currentContext.url;
+        }
+        updateBackButton();
         loadRuns();
       } else {
+        backToEditorEl.classList.add('hidden');
         showState(noFlowEl);
       }
     }
@@ -225,6 +273,8 @@
       loadRuns();
     }
   });
+
+  backBtn.addEventListener('click', returnToEditor);
 
   // Start
   init();

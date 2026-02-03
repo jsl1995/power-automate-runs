@@ -120,6 +120,42 @@ h1 {
   background: #f3f2f1;
 }
 
+.back-to-editor {
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid #edebe9;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #0078d4;
+  border-radius: 4px;
+  background: #fff;
+  color: #0078d4;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.back-btn:hover {
+  background: #0078d4;
+  color: #fff;
+}
+
+.back-btn:active {
+  background: #106ebe;
+  color: #fff;
+}
+
+.back-btn svg {
+  flex-shrink: 0;
+}
+
 #runs-list {
   padding: 8px 0;
 }
