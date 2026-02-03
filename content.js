@@ -7,10 +7,16 @@
   function extractFlowContext() {
     const url = window.location.href;
 
-    // Match both patterns:
+    // Match multiple URL patterns:
     // - /environments/{envId}/flows/{flowId} (Power Automate)
     // - /environments/{envId}/solutions/{solutionId}/flows/{flowId} (Power Apps)
-    const match = url.match(/\/environments\/([^/]+)(?:\/solutions\/[^/]+)?\/flows\/([^/?]+)/);
+    // - /environments/{envId}/solutions/{solutionId}/objects/cloudflows/{flowId} (Power Apps solution view)
+    let match = url.match(/\/environments\/([^/]+)(?:\/solutions\/[^/]+)?\/flows\/([^/?]+)/);
+
+    if (!match) {
+      // Try Power Apps cloudflows pattern
+      match = url.match(/\/environments\/([^/]+)\/solutions\/[^/]+\/objects\/cloudflows\/([^/?]+)/);
+    }
 
     if (match) {
       return {
