@@ -147,9 +147,9 @@
     return `${baseUrl}/environments/${environmentId}/flows/${flowId}`;
   }
 
-  // Update back button visibility
+  // Update back button visibility - always show when we have a flow context
   function updateBackButton() {
-    if (flowEditorUrl && currentContext && isRunPage(currentContext.url)) {
+    if (flowEditorUrl && currentContext) {
       backToEditorEl.classList.remove('hidden');
     } else {
       backToEditorEl.classList.add('hidden');
@@ -159,11 +159,6 @@
   // Open run in current tab
   function openRun(runId) {
     if (!currentContext) return;
-
-    // Store the editor URL before navigating to a run
-    if (!isRunPage(currentContext.url)) {
-      flowEditorUrl = currentContext.url;
-    }
 
     const { environmentId, flowId, origin } = currentContext;
     const baseUrl = origin || 'https://make.powerautomate.com';
@@ -229,10 +224,8 @@
 
       if (context) {
         currentContext = context;
-        // Store the editor URL if we're on the editor (not a run page)
-        if (!isRunPage(context.url)) {
-          flowEditorUrl = context.url;
-        }
+        // Always store/update the editor URL from context
+        flowEditorUrl = getFlowEditorUrl(context);
         updateBackButton();
         loadRuns();
       } else {
@@ -248,10 +241,8 @@
     if (message.type === 'CONTEXT_UPDATED' && message.tabId === currentTabId) {
       currentContext = message.context;
       if (currentContext) {
-        // Update stored editor URL if we're on the editor
-        if (!isRunPage(currentContext.url)) {
-          flowEditorUrl = currentContext.url;
-        }
+        // Always keep the editor URL updated
+        flowEditorUrl = getFlowEditorUrl(currentContext);
         updateBackButton();
         loadRuns();
       } else {
