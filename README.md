@@ -1,5 +1,9 @@
 # Flow Run Buddy
 
+<p align="center">
+  <img src="flow-run-buddy-logo.png" alt="Flow Run Buddy Logo" width="128">
+</p>
+
 A Chrome extension that displays run history for Power Automate Cloud Flows directly from the flow designer.
 
 ## Features
