@@ -299,6 +299,9 @@
     if (!currentContext || !currentTabId) return;
     const { environmentId, flowId, solutionId } = currentContext;
 
+    console.log('openInPowerApps - currentContext:', currentContext);
+    console.log('openInPowerApps - solutionId:', solutionId);
+
     let url;
     if (solutionId) {
       // Use cloudflows URL pattern when we have a solution ID
@@ -307,6 +310,7 @@
       // Fallback to standard flows URL
       url = `https://make.powerapps.com/environments/${environmentId}/flows/${flowId}`;
     }
+    console.log('openInPowerApps - url:', url);
     chrome.tabs.update(currentTabId, { url: url });
   }
 
