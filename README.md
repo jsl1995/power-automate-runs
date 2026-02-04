@@ -26,6 +26,7 @@ A Chrome extension that displays run history for Power Automate Cloud Flows dire
 - **Last 10 runs** - Quick access to recent flow executions
 - **Run details** - Status, timestamp, and duration for each run
 - **Expandable steps** - Click to expand any run and see individual action results
+- **Inline error details** - When a run fails, expand it to see the flow-level failure message and step errors directly in the panel
 - **One-click navigation** - Click any run to view its full details
 - **Double-click to open** - Double-click a run row to navigate to run details
 - **Return to editor** - Quick button to return to the flow editor after viewing a run
@@ -67,15 +68,15 @@ It then fetches run history from the Power Automate API using your existing brow
 
 ## Files
 
-| File | Description |
-|------|-------------|
-| `manifest.json` | Extension configuration (Manifest V3) |
-| `background.js` | Service worker for API calls and token management |
-| `content.js` | Detects flow context from page URL |
-| `sidepanel.html` | Side panel UI structure |
-| `sidepanel.js` | Side panel logic and rendering |
-| `sidepanel.css` | Styling |
-| `icons/` | Extension icons (16, 48, 128px) |
+| File             | Description                                       |
+| ---------------- | ------------------------------------------------- |
+| `manifest.json`  | Extension configuration (Manifest V3)             |
+| `background.js`  | Service worker for API calls and token management |
+| `content.js`     | Detects flow context from page URL                |
+| `sidepanel.html` | Side panel UI structure                           |
+| `sidepanel.js`   | Side panel logic and rendering                    |
+| `sidepanel.css`  | Styling                                           |
+| `icons/`         | Extension icons (16, 48, 128px)                   |
 
 ## Permissions
 

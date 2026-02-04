@@ -64,8 +64,13 @@ h1 {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 #content {
@@ -346,6 +351,15 @@ h1 {
   padding: 8px 0;
 }
 
+.actions-run-error {
+  color: #d13438;
+  background: #fde7e9;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 4px 0 8px 0;
+  font-size: 13px;
+}
+
 .action-item {
   display: flex;
   align-items: center;
@@ -383,6 +397,21 @@ h1 {
 
 .action-name {
   color: #323130;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.action-error {
+  color: #a80000;
+  font-size: 12px;
+  margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

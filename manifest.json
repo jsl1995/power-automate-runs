@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Flow Run Buddy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "View run history for Power Automate Cloud Flows directly from the flow designer",
   "permissions": [
     "activeTab",
@@ -23,7 +23,9 @@
         "https://make.powerautomate.com/*",
         "https://make.powerapps.com/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

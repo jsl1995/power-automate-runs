@@ -1,6 +1,6 @@
 // Side panel logic for Flow Run Buddy
 
-(function() {
+(function () {
   'use strict';
 
   // DOM elements
@@ -101,8 +101,26 @@
     }
   }
 
+  // Extract a useful run-level error message
+  function getRunError(run) {
+    const error = run?.properties?.error;
+    if (!error) return null;
+
+    if (typeof error.message === 'string' && error.message.trim()) {
+      return error.message.trim();
+    }
+
+    if (Array.isArray(error.details) && error.details[0]?.message) {
+      return String(error.details[0].message).trim();
+    }
+
+    return null;
+  }
+
   // Cache for loaded actions
   const actionsCache = new Map();
+  // Cache for runs by id (name)
+  let runsById = new Map();
 
   // Render runs list
   function renderRuns(runs) {
@@ -204,17 +222,20 @@
       actionsContainer.classList.remove('hidden');
       expandIcon.style.transform = 'rotate(-180deg)';
 
+      const run = runsById.get(runId);
+      const runError = getRunError(run);
+
       // Load actions if not cached
       if (!actionsCache.has(runId)) {
-        await loadActions(container, runId);
+        await loadActions(container, runId, runError);
       } else {
-        renderActions(actionsContainer, actionsCache.get(runId));
+        renderActions(actionsContainer, actionsCache.get(runId), runError);
       }
     }
   }
 
   // Load actions for a run
-  async function loadActions(container, runId) {
+  async function loadActions(container, runId, runError) {
     const actionsContainer = container.querySelector('.actions-container');
 
     try {
@@ -228,7 +249,7 @@
 
       if (response && response.success) {
         actionsCache.set(runId, response.actions);
-        renderActions(actionsContainer, response.actions);
+        renderActions(actionsContainer, response.actions, runError);
       } else {
         actionsContainer.innerHTML = `
           <div class="actions-error">
@@ -246,26 +267,79 @@
   }
 
   // Render actions list
-  function renderActions(container, actions) {
+  function renderActions(container, actions, runError) {
     if (!actions || actions.length === 0) {
       container.innerHTML = '<div class="actions-empty">No steps found</div>';
       return;
     }
 
-    container.innerHTML = actions.map(action => {
+    const headerHtml = runError ? `
+      <div class="actions-run-error" title="${runError}">
+        ${runError}
+      </div>
+    ` : '';
+
+    const actionsHtml = actions.map(action => {
       const status = getStatusInfo(action.status);
+      const errorMessage = action.error?.message || action.error?.details?.[0]?.message;
       return `
         <div class="action-item">
           <div class="action-status ${status.class}">${status.icon}</div>
-          <div class="action-name">${action.name}</div>
+          <div class="action-main">
+            <div class="action-name">${action.name}</div>
+            ${status.class === 'failed' && errorMessage ? `
+              <div class="action-error" title="${errorMessage}">
+                ${errorMessage}
+              </div>
+            ` : ''}
+          </div>
         </div>
       `;
     }).join('');
+
+    container.innerHTML = headerHtml + actionsHtml;
   }
 
   // Check if current URL is a run page (not the editor)
   function isRunPage(url) {
     return url && url.includes('/runs/');
+  }
+
+  // Derive flow context directly from a tab URL
+  function extractContextFromUrl(urlString) {
+    try {
+      if (!urlString) return null;
+
+      const url = new URL(urlString);
+      const origin = url.origin;
+      const isPowerApps = origin.includes('powerapps.com');
+
+      const envMatch = url.pathname.match(/\/environments\/([^/]+)/);
+      if (!envMatch) return null;
+      const environmentId = envMatch[1];
+
+      let flowId = null;
+      let flowMatch = url.pathname.match(/\/flows\/([^/?]+)/);
+      if (!flowMatch) {
+        flowMatch = url.pathname.match(/\/objects\/cloudflows\/([^/?]+)/);
+      }
+
+      if (flowMatch) {
+        flowId = flowMatch[1];
+      }
+
+      if (!flowId) return null;
+
+      return {
+        environmentId,
+        flowId,
+        origin,
+        url: urlString,
+        isPowerApps
+      };
+    } catch (e) {
+      return null;
+    }
   }
 
   // Get the flow editor URL from context
@@ -320,6 +394,7 @@
       });
 
       if (response && response.success) {
+        runsById = new Map(response.runs.map(run => [run.name, run]));
         renderRuns(response.runs);
       } else {
         errorMessageEl.textContent = response?.error || 'Failed to load runs';
@@ -364,7 +439,21 @@
         updateBackButton();
         loadRuns();
       } else {
-        showState(noFlowEl);
+        // Fallback: derive context directly from the active tab URL
+        const urlContext = extractContextFromUrl(tab.url);
+        if (urlContext) {
+          currentContext = urlContext;
+          if (urlContext.isPowerApps) {
+            backToEditorEl.classList.add('hidden');
+            showState(powerAppsRedirectEl);
+            return;
+          }
+          flowEditorUrl = getFlowEditorUrl(urlContext);
+          updateBackButton();
+          loadRuns();
+        } else {
+          showState(noFlowEl);
+        }
       }
     } catch (error) {
       showState(noFlowEl);
