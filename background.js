@@ -3,9 +3,6 @@
 // Store current flow context per tab
 const tabContexts = new Map();
 
-// Cache flow definitions to avoid repeated fetches
-const flowDefinitionCache = new Map();
-
 // Listen for messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Flow context update from content script
@@ -188,16 +185,15 @@ async function fetchRunsWithToken(tabId, environmentId, flowId) {
   }
 }
 
-// Fetch flow definition to get action types and connector info
-async function fetchFlowDefinition(tabId, environmentId, flowId, token) {
-  const cacheKey = `${environmentId}:${flowId}`;
+// Fetch run actions/steps
+async function fetchRunActions(tabId, environmentId, flowId, runId) {
+  const token = await getToken(tabId);
 
-  // Return cached definition if available
-  if (flowDefinitionCache.has(cacheKey)) {
-    return flowDefinitionCache.get(cacheKey);
+  if (!token) {
+    return { success: false, error: 'Could not find auth token.' };
   }
 
-  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}?api-version=2016-11-01&$expand=definition,connectionReferences`;
+  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/runs/${runId}?api-version=2016-11-01&$expand=properties/actions`;
 
   try {
     const response = await fetch(apiUrl, {
@@ -209,97 +205,20 @@ async function fetchFlowDefinition(tabId, environmentId, flowId, token) {
     });
 
     if (!response.ok) {
-      return null;
+      return { success: false, error: `API error: ${response.status}` };
     }
 
     const data = await response.json();
-    const definition = data.properties?.definition || {};
-    const connectionRefs = data.properties?.connectionReferences || {};
-
-    // Build a map of action name -> action metadata
-    const actionMetadata = {};
-    const allActions = {
-      ...(definition.actions || {}),
-      ...(definition.triggers || {})
-    };
-
-    // Recursively extract actions from scopes (conditions, loops, etc.)
-    function extractActions(actions, metadata) {
-      for (const [name, action] of Object.entries(actions || {})) {
-        metadata[name] = {
-          type: action.type,
-          kind: action.kind,
-          connectorId: action.inputs?.host?.apiId || action.inputs?.host?.connectionName
-        };
-
-        // Handle nested actions in scopes, conditions, loops
-        if (action.actions) {
-          extractActions(action.actions, metadata);
-        }
-        if (action.else?.actions) {
-          extractActions(action.else.actions, metadata);
-        }
-        if (action.cases) {
-          for (const caseBlock of Object.values(action.cases)) {
-            extractActions(caseBlock.actions, metadata);
-          }
-        }
-        if (action.default?.actions) {
-          extractActions(action.default.actions, metadata);
-        }
-      }
-    }
-
-    extractActions(allActions, actionMetadata);
-
-    const result = { actionMetadata, connectionRefs };
-    flowDefinitionCache.set(cacheKey, result);
-
-    return result;
-  } catch (error) {
-    return null;
-  }
-}
-
-// Fetch run actions/steps
-async function fetchRunActions(tabId, environmentId, flowId, runId) {
-  const token = await getToken(tabId);
-
-  if (!token) {
-    return { success: false, error: 'Could not find auth token.' };
-  }
-
-  // Fetch flow definition for action types (in parallel with run data)
-  const [runResponse, flowDef] = await Promise.all([
-    fetch(`https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/runs/${runId}?api-version=2016-11-01&$expand=properties/actions`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    }),
-    fetchFlowDefinition(tabId, environmentId, flowId, token)
-  ]);
-
-  try {
-    if (!runResponse.ok) {
-      return { success: false, error: `API error: ${runResponse.status}` };
-    }
-
-    const data = await runResponse.json();
     const actions = data.properties?.actions || {};
-    const actionMetadata = flowDef?.actionMetadata || {};
 
-    // Convert actions object to sorted array with type info
+    // Convert actions object to sorted array
     const actionsList = Object.entries(actions).map(([name, action]) => ({
       name: name,
       status: action.status,
       startTime: action.startTime,
       endTime: action.endTime,
       code: action.code,
-      error: action.error,
-      type: actionMetadata[name]?.type || null,
-      kind: actionMetadata[name]?.kind || null
+      error: action.error
     })).sort((a, b) => {
       // Sort by start time
       if (!a.startTime) return 1;

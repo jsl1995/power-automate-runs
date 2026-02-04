@@ -369,108 +369,6 @@
     }
   }
 
-  // Get connector icon SVG based on action type
-  function getActionIcon(type, kind) {
-    const typeLower = (type || '').toLowerCase();
-    const kindLower = (kind || '').toLowerCase();
-
-    // Built-in action icons (SVG)
-    const icons = {
-      // Variables
-      initializevariable: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><text x="16" y="22" font-size="16" font-weight="bold" fill="white" text-anchor="middle">x</text></svg>`,
-      setvariable: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><text x="16" y="22" font-size="16" font-weight="bold" fill="white" text-anchor="middle">x</text></svg>`,
-      incrementvariable: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><text x="16" y="22" font-size="16" font-weight="bold" fill="white" text-anchor="middle">x</text></svg>`,
-      appendtoarrayvariable: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><text x="16" y="22" font-size="16" font-weight="bold" fill="white" text-anchor="middle">x</text></svg>`,
-      appendtostringvariable: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><text x="16" y="22" font-size="16" font-weight="bold" fill="white" text-anchor="middle">x</text></svg>`,
-
-      // Data operations
-      compose: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0066FF"/><path d="M8 10h16M8 16h16M8 22h10" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`,
-      parsejson: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0066FF"/><text x="16" y="21" font-size="11" font-weight="bold" fill="white" text-anchor="middle">{}</text></svg>`,
-      join: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0066FF"/><path d="M8 16h16M12 12v8M20 12v8" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`,
-      select: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0066FF"/><path d="M10 10l6 6-6 6M16 16h8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-      filter: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0066FF"/><path d="M8 10h16l-5 6v8l-6-3v-5l-5-6z" stroke="white" stroke-width="2" fill="none"/></svg>`,
-      createcsvtable: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0066FF"/><rect x="8" y="10" width="16" height="12" rx="1" stroke="white" stroke-width="2" fill="none"/><path d="M8 14h16M14 10v12" stroke="white" stroke-width="2"/></svg>`,
-      createhtmltable: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0066FF"/><rect x="8" y="10" width="16" height="12" rx="1" stroke="white" stroke-width="2" fill="none"/><path d="M8 14h16M14 10v12" stroke="white" stroke-width="2"/></svg>`,
-
-      // Control
-      if: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#486991"/><path d="M16 8l8 8-8 8-8-8 8-8z" stroke="white" stroke-width="2" fill="none"/></svg>`,
-      foreach: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#486991"/><path d="M12 10v12M12 22l4-4-4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="16" r="4" stroke="white" stroke-width="2" fill="none"/></svg>`,
-      until: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#486991"/><circle cx="16" cy="16" r="6" stroke="white" stroke-width="2" fill="none"/><path d="M16 12v4l3 2" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`,
-      scope: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#486991"/><rect x="8" y="8" width="16" height="16" rx="2" stroke="white" stroke-width="2" fill="none"/></svg>`,
-      switch: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#486991"/><path d="M10 12h12M10 16h12M10 20h12" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="22" cy="12" r="2" fill="white"/></svg>`,
-      terminate: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#D13438"/><circle cx="16" cy="16" r="6" stroke="white" stroke-width="2" fill="none"/><path d="M13 13l6 6M19 13l-6 6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`,
-      wait: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#486991"/><circle cx="16" cy="16" r="7" stroke="white" stroke-width="2" fill="none"/><path d="M16 11v5l4 2" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`,
-      delay: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#486991"/><circle cx="16" cy="16" r="7" stroke="white" stroke-width="2" fill="none"/><path d="M16 11v5l4 2" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`,
-      delayuntil: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#486991"/><circle cx="16" cy="16" r="7" stroke="white" stroke-width="2" fill="none"/><path d="M16 11v5l4 2" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`,
-
-      // HTTP
-      http: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><circle cx="16" cy="16" r="7" stroke="white" stroke-width="2" fill="none"/><path d="M9 16h14M16 9c-2 2-3 4.5-3 7s1 5 3 7M16 9c2 2 3 4.5 3 7s-1 5-3 7" stroke="white" stroke-width="2"/></svg>`,
-      httpwebhook: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><circle cx="16" cy="16" r="7" stroke="white" stroke-width="2" fill="none"/><path d="M9 16h14M16 9c-2 2-3 4.5-3 7s1 5 3 7M16 9c2 2 3 4.5 3 7s-1 5-3 7" stroke="white" stroke-width="2"/></svg>`,
-
-      // Response
-      response: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#107C10"/><path d="M10 16l4 4 8-8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-
-      // Connectors (OpenApiConnection)
-      openapiconnection: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#742774"/><circle cx="11" cy="16" r="3" stroke="white" stroke-width="2" fill="none"/><circle cx="21" cy="16" r="3" stroke="white" stroke-width="2" fill="none"/><path d="M14 16h4" stroke="white" stroke-width="2"/></svg>`,
-      openapiconnectionwebhook: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#742774"/><circle cx="11" cy="16" r="3" stroke="white" stroke-width="2" fill="none"/><circle cx="21" cy="16" r="3" stroke="white" stroke-width="2" fill="none"/><path d="M14 16h4" stroke="white" stroke-width="2"/></svg>`,
-
-      // Expression/Workflow
-      expression: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#7719AA"/><text x="16" y="21" font-size="14" font-weight="bold" fill="white" text-anchor="middle">fx</text></svg>`,
-      workflow: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><path d="M8 12h6v8H8zM18 12h6v8h-6zM14 16h4" stroke="white" stroke-width="2" fill="none"/></svg>`,
-
-      // Query
-      query: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0066FF"/><path d="M10 10l6 6-6 6M16 16h8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-
-      // Table
-      table: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0066FF"/><rect x="8" y="10" width="16" height="12" rx="1" stroke="white" stroke-width="2" fill="none"/><path d="M8 14h16M14 10v12M20 10v12" stroke="white" stroke-width="2"/></svg>`,
-
-      // JavaScript/Script
-      javascriptcode: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#F7DF1E"/><text x="16" y="22" font-size="12" font-weight="bold" fill="#000" text-anchor="middle">JS</text></svg>`,
-
-      // Triggers
-      request: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><path d="M10 16l6-8v6h6l-6 8v-6h-6z" fill="white"/></svg>`,
-      recurrence: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><circle cx="16" cy="16" r="7" stroke="white" stroke-width="2" fill="none"/><path d="M16 11v5l4 2" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`,
-      manual: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#0078D4"/><path d="M16 10v12M10 16h12" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`,
-
-      // Default/unknown
-      default: `<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="4" fill="#8764B8"/><circle cx="16" cy="16" r="6" stroke="white" stroke-width="2" fill="none"/><path d="M16 14v1M16 18h.01" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`
-    };
-
-    // Check for specific type match
-    if (icons[typeLower]) {
-      return icons[typeLower];
-    }
-
-    // Check for kind (e.g., "Http" kind for HTTP trigger)
-    if (kindLower && icons[kindLower]) {
-      return icons[kindLower];
-    }
-
-    // Partial matches for common patterns
-    if (typeLower.includes('variable')) return icons.initializevariable;
-    if (typeLower.includes('http')) return icons.http;
-    if (typeLower.includes('openapi')) return icons.openapiconnection;
-    if (typeLower.includes('condition') || typeLower.includes('if')) return icons.if;
-    if (typeLower.includes('loop') || typeLower.includes('foreach') || typeLower.includes('apply')) return icons.foreach;
-    if (typeLower.includes('scope')) return icons.scope;
-    if (typeLower.includes('switch')) return icons.switch;
-    if (typeLower.includes('compose')) return icons.compose;
-    if (typeLower.includes('parse')) return icons.parsejson;
-    if (typeLower.includes('json')) return icons.parsejson;
-    if (typeLower.includes('table')) return icons.table;
-    if (typeLower.includes('filter')) return icons.filter;
-    if (typeLower.includes('select')) return icons.select;
-    if (typeLower.includes('join')) return icons.join;
-    if (typeLower.includes('wait') || typeLower.includes('delay')) return icons.wait;
-    if (typeLower.includes('terminate')) return icons.terminate;
-    if (typeLower.includes('response')) return icons.response;
-    if (typeLower.includes('workflow')) return icons.workflow;
-    if (typeLower.includes('recurrence')) return icons.recurrence;
-    if (typeLower.includes('request') || typeLower.includes('trigger')) return icons.request;
-
-    return icons.default;
-  }
-
   // Render actions list
   function renderActions(container, actions, runError) {
     if (!actions || actions.length === 0) {
@@ -487,11 +385,9 @@
     const actionsHtml = actions.map(action => {
       const status = getStatusInfo(action.status);
       const errorMessage = action.error?.message || action.error?.details?.[0]?.message;
-      const actionIcon = getActionIcon(action.type, action.kind);
       return `
         <div class="action-item">
           <div class="action-status ${status.class}">${status.icon}</div>
-          <div class="action-icon">${actionIcon}</div>
           <div class="action-main">
             <div class="action-name">${action.name}</div>
             ${status.class === 'failed' && errorMessage ? `
