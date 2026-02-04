@@ -283,7 +283,7 @@ async function resubmitRun(tabId, environmentId, flowId, runId) {
     return { success: false, error: 'Could not find auth token.' };
   }
 
-  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/triggers/manual/runs/${runId}/resubmit?api-version=2016-11-01`;
+  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/triggers/manual/histories/${runId}/resubmit?api-version=2016-11-01`;
 
   try {
     const response = await fetch(apiUrl, {
