@@ -469,3 +469,43 @@ body.dark-theme .theme-icon {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Cancel button */
+.cancel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.cancel-btn:hover {
+  background: var(--color-danger);
+  color: #ffffff;
+}
+
+.cancel-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.cancel-btn.cancelling {
+  background: var(--color-surface-subtle);
+}
+
+.spinner-tiny {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-text-muted);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}

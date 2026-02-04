@@ -175,6 +175,7 @@
       const endTime = run.properties?.endTime;
       const duration = formatDuration(startTime, endTime);
       const runId = run.name;
+      const isRunning = status.class === 'running';
 
       return `
         <div class="run-container" data-run-id="${runId}">
@@ -194,6 +195,13 @@
                 ${duration ? `<span class="run-duration">· ${duration}</span>` : ''}
               </div>
             </div>
+            ${isRunning ? `
+              <button class="cancel-btn" title="Cancel run">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" fill="none"/>
+                </svg>
+              </button>
+            ` : ''}
             <button class="open-btn" title="Open run details">
               <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M6 4l4 4-4 4"/>
@@ -242,7 +250,62 @@
       });
     });
 
+    // Add click handlers for cancel buttons
+    runsListEl.querySelectorAll('.cancel-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const container = btn.closest('.run-container');
+        const runId = container.dataset.runId;
+        cancelRun(runId, btn);
+      });
+    });
+
     showState(runsListEl);
+  }
+
+  // Cancel a running flow
+  async function cancelRun(runId, btn) {
+    if (!currentContext || !currentTabId) return;
+
+    // Disable button and show loading state
+    btn.disabled = true;
+    btn.classList.add('cancelling');
+    btn.innerHTML = '<div class="spinner-tiny"></div>';
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'CANCEL_RUN',
+        environmentId: currentContext.environmentId,
+        flowId: currentContext.flowId,
+        runId: runId,
+        tabId: currentTabId
+      });
+
+      if (response && response.success) {
+        // Refresh the runs list to show updated status
+        actionsCache.delete(runId);
+        await loadRuns();
+      } else {
+        // Re-enable button on error
+        btn.disabled = false;
+        btn.classList.remove('cancelling');
+        btn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" fill="none"/>
+          </svg>
+        `;
+        alert(response?.error || 'Failed to cancel run');
+      }
+    } catch (error) {
+      btn.disabled = false;
+      btn.classList.remove('cancelling');
+      btn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" fill="none"/>
+        </svg>
+      `;
+      alert(error.message || 'Failed to cancel run');
+    }
   }
 
   // Toggle expand/collapse for a run

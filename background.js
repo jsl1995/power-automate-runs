@@ -51,6 +51,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Cancel a running flow
+  if (message.type === 'CANCEL_RUN') {
+    const { environmentId, flowId, runId, tabId } = message;
+
+    cancelRun(tabId, environmentId, flowId, runId)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+
+    return true;
+  }
+
   return false;
 });
 
@@ -216,6 +227,38 @@ async function fetchRunActions(tabId, environmentId, flowId, runId) {
     });
 
     return { success: true, actions: actionsList };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Cancel a running flow
+async function cancelRun(tabId, environmentId, flowId, runId) {
+  const token = await getToken(tabId);
+
+  if (!token) {
+    return { success: false, error: 'Could not find auth token.' };
+  }
+
+  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/runs/${runId}/cancel?api-version=2016-11-01`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 400) {
+        return { success: false, error: 'Run cannot be cancelled (may have already completed).' };
+      }
+      return { success: false, error: `API error: ${response.status}` };
+    }
+
+    return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
