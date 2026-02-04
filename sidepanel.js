@@ -180,7 +180,7 @@
       return `
         <div class="run-container" data-run-id="${runId}">
           <div class="run-item">
-            <button class="expand-btn" title="Show steps">
+            <button class="expand-btn" title="Expand to see flow steps">
               <svg class="expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M4 6l4 4 4-4"/>
               </svg>
@@ -202,7 +202,7 @@
                 </svg>
               </button>
             ` : ''}
-            <button class="open-btn" title="Open run details">
+            <button class="open-btn" title="Open flow run">
               <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M6 4l4 4-4 4"/>
               </svg>
