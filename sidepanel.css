@@ -4,12 +4,48 @@
   padding: 0;
 }
 
+:root {
+  --color-bg: #faf9f8;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f3f2f1;
+  --color-surface-alt: #f9f9f9;
+  --color-border: #edebe9;
+  --color-text: #323130;
+  --color-text-muted: #605e5c;
+  --color-icon-muted: #a19f9d;
+  --color-primary: #0078d4;
+  --color-primary-hover: #106ebe;
+  --color-primary-active: #005a9e;
+  --color-danger: #d13438;
+  --color-danger-soft: #fde7e9;
+  --color-success: #107c10;
+  --color-success-soft: #dff6dd;
+}
+
 body {
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
-  color: #323130;
-  background: #faf9f8;
+  color: var(--color-text);
+  background: var(--color-bg);
   line-height: 1.5;
+}
+
+body.dark-theme {
+  --color-bg: #201f1e;
+  --color-surface: #252423;
+  --color-surface-subtle: #323130;
+  --color-surface-alt: #292827;
+  --color-border: #3b3a39;
+  --color-text: #f3f2f1;
+  --color-text-muted: #c8c6c4;
+  --color-icon-muted: #a19f9d;
+  --color-primary: #2899f5;
+  --color-primary-hover: #3aa0f3;
+  --color-primary-active: #1683d4;
+  --color-danger: #f1707b;
+  --color-danger-soft: #442726;
+  --color-success: #92c353;
+  --color-success-soft: #24411f;
 }
 
 .container {
@@ -23,8 +59,8 @@ header {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #fff;
-  border-bottom: 1px solid #edebe9;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -33,10 +69,17 @@ header {
 h1 {
   font-size: 16px;
   font-weight: 600;
-  color: #323130;
+  color: var(--color-text);
 }
 
-.refresh-btn {
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.refresh-btn,
+.theme-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,18 +88,28 @@ h1 {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: #605e5c;
+  color: var(--color-icon-muted);
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
 
-.refresh-btn:hover {
-  background: #f3f2f1;
-  color: #323130;
+.refresh-btn:hover,
+.theme-toggle:hover {
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
 }
 
-.refresh-btn:active {
-  background: #edebe9;
+.refresh-btn:active,
+.theme-toggle:active {
+  background: var(--color-border);
+}
+
+.theme-icon {
+  transition: transform 0.2s ease;
+}
+
+body.dark-theme .theme-icon {
+  transform: rotate(180deg);
 }
 
 .refresh-btn.spinning svg {
@@ -85,7 +138,7 @@ h1 {
   justify-content: center;
   padding: 48px 24px;
   text-align: center;
-  color: #605e5c;
+  color: var(--color-text-muted);
   gap: 16px;
 }
 
@@ -104,8 +157,8 @@ h1 {
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #f3f2f1;
-  border-top-color: #0078d4;
+  border: 3px solid var(--color-surface-subtle);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -114,23 +167,23 @@ h1 {
   padding: 8px 16px;
   border: 1px solid #8a8886;
   border-radius: 4px;
-  background: #fff;
-  color: #323130;
+  background: var(--color-surface);
+  color: var(--color-text);
   font-size: 14px;
   cursor: pointer;
   transition: background 0.1s;
 }
 
 .retry-btn:hover {
-  background: #f3f2f1;
+  background: var(--color-surface-subtle);
 }
 
 .primary-btn {
   padding: 10px 20px;
   border: none;
   border-radius: 4px;
-  background: #0078d4;
-  color: #fff;
+  background: var(--color-primary);
+  color: #ffffff;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -138,17 +191,17 @@ h1 {
 }
 
 .primary-btn:hover {
-  background: #106ebe;
+  background: var(--color-primary-hover);
 }
 
 .primary-btn:active {
-  background: #005a9e;
+  background: var(--color-primary-active);
 }
 
 .back-to-editor {
   padding: 8px 16px;
-  background: #fff;
-  border-bottom: 1px solid #edebe9;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .back-btn {
@@ -159,8 +212,8 @@ h1 {
   padding: 8px 12px;
   border: 1px solid #0078d4;
   border-radius: 4px;
-  background: #fff;
-  color: #0078d4;
+  background: var(--color-surface);
+  color: var(--color-primary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -168,13 +221,13 @@ h1 {
 }
 
 .back-btn:hover {
-  background: #0078d4;
-  color: #fff;
+  background: var(--color-primary);
+  color: #ffffff;
 }
 
 .back-btn:active {
-  background: #106ebe;
-  color: #fff;
+  background: var(--color-primary-hover);
+  color: #ffffff;
 }
 
 .back-btn svg {
@@ -195,11 +248,11 @@ h1 {
 }
 
 .run-item:hover {
-  background: #f3f2f1;
+  background: var(--color-surface-subtle);
 }
 
 .run-item:active {
-  background: #edebe9;
+  background: var(--color-border);
 }
 
 .status-icon {
@@ -214,23 +267,23 @@ h1 {
 }
 
 .status-icon.succeeded {
-  background: #dff6dd;
-  color: #107c10;
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 
 .status-icon.failed {
-  background: #fde7e9;
-  color: #d13438;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .status-icon.cancelled {
-  background: #f3f2f1;
-  color: #605e5c;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-muted);
 }
 
 .status-icon.running {
   background: #deecf9;
-  color: #0078d4;
+  color: var(--color-primary);
 }
 
 .run-details {
@@ -240,7 +293,7 @@ h1 {
 
 .run-time {
   font-size: 14px;
-  color: #323130;
+  color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -248,7 +301,7 @@ h1 {
 
 .run-meta {
   font-size: 12px;
-  color: #605e5c;
+  color: var(--color-text-muted);
   display: flex;
   gap: 8px;
   margin-top: 2px;
@@ -262,7 +315,7 @@ h1 {
 
 .chevron {
   flex-shrink: 0;
-  color: #a19f9d;
+  color: var(--color-icon-muted);
 }
 
 /* Expand button */
@@ -275,15 +328,15 @@ h1 {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: #605e5c;
+  color: var(--color-text-muted);
   cursor: pointer;
   flex-shrink: 0;
   transition: background 0.1s;
 }
 
 .expand-btn:hover {
-  background: #edebe9;
-  color: #323130;
+  background: var(--color-border);
+  color: var(--color-text);
 }
 
 .expand-icon {
@@ -299,20 +352,20 @@ h1 {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: #a19f9d;
+  color: var(--color-icon-muted);
   cursor: pointer;
   flex-shrink: 0;
   transition: background 0.1s, color 0.1s;
 }
 
 .open-btn:hover {
-  background: #0078d4;
-  color: #fff;
+  background: var(--color-primary);
+  color: #ffffff;
 }
 
 /* Run container */
 .run-container {
-  border-bottom: 1px solid #f3f2f1;
+  border-bottom: 1px solid var(--color-surface-subtle);
 }
 
 .run-container:last-child {
@@ -321,16 +374,16 @@ h1 {
 
 /* Actions container */
 .actions-container {
-  background: #f9f9f9;
+  background: var(--color-surface-alt);
   padding: 8px 16px 8px 56px;
-  border-top: 1px solid #edebe9;
+  border-top: 1px solid var(--color-border);
 }
 
 .actions-loading {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #605e5c;
+  color: var(--color-text-muted);
   font-size: 13px;
   padding: 8px 0;
 }
@@ -338,22 +391,22 @@ h1 {
 .spinner-small {
   width: 16px;
   height: 16px;
-  border: 2px solid #f3f2f1;
-  border-top-color: #0078d4;
+  border: 2px solid var(--color-surface-subtle);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 .actions-error,
 .actions-empty {
-  color: #605e5c;
+  color: var(--color-text-muted);
   font-size: 13px;
   padding: 8px 0;
 }
 
 .actions-run-error {
-  color: #d13438;
-  background: #fde7e9;
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
   border-radius: 4px;
   padding: 6px 8px;
   margin: 4px 0 8px 0;
@@ -380,23 +433,23 @@ h1 {
 }
 
 .action-status.succeeded {
-  background: #dff6dd;
-  color: #107c10;
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 
 .action-status.failed {
-  background: #fde7e9;
-  color: #d13438;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .action-status.skipped,
 .action-status.cancelled {
-  background: #f3f2f1;
-  color: #605e5c;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-muted);
 }
 
 .action-name {
-  color: #323130;
+  color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -409,7 +462,7 @@ h1 {
 }
 
 .action-error {
-  color: #a80000;
+  color: #f1707b;
   font-size: 12px;
   margin-top: 2px;
   white-space: nowrap;

@@ -10,11 +10,18 @@
   <div class="container">
     <header>
       <h1>Run History</h1>
-      <button id="refresh-btn" class="refresh-btn" title="Refresh">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M13.65 2.35A8 8 0 1 0 16 8h-2a6 6 0 1 1-1.76-4.24L10 6h6V0l-2.35 2.35z"/>
-        </svg>
-      </button>
+      <div class="header-actions">
+        <button id="theme-toggle" class="theme-toggle" title="Toggle dark mode">
+          <svg class="theme-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M9.5 1.5A5.5 5.5 0 1 0 14.5 10a.5.5 0 0 0-.7-.6A4 4 0 0 1 9.1 2.2.5.5 0 0 0 9.5 1.5z"/>
+          </svg>
+        </button>
+        <button id="refresh-btn" class="refresh-btn" title="Refresh">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M13.65 2.35A8 8 0 1 0 16 8h-2a6 6 0 1 1-1.76-4.24L10 6h6V0l-2.35 2.35z"/>
+          </svg>
+        </button>
+      </div>
     </header>
 
     <div id="back-to-editor" class="back-to-editor hidden">

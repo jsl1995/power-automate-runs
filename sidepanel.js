@@ -16,12 +16,52 @@
   const retryBtn = document.getElementById('retry-btn');
   const backToEditorEl = document.getElementById('back-to-editor');
   const backBtn = document.getElementById('back-btn');
+  const themeToggleBtn = document.getElementById('theme-toggle');
 
   // Current state
   let currentContext = null;
   let currentTabId = null;
   let isLoading = false;
   let flowEditorUrl = null; // Store the flow editor URL to return to
+  let currentTheme = 'light';
+
+  // Theme helpers
+  function applyTheme(theme) {
+    currentTheme = theme === 'dark' ? 'dark' : 'light';
+
+    if (currentTheme === 'dark') {
+      document.body.classList.add('dark-theme');
+      if (themeToggleBtn) {
+        themeToggleBtn.title = 'Switch to light mode';
+      }
+    } else {
+      document.body.classList.remove('dark-theme');
+      if (themeToggleBtn) {
+        themeToggleBtn.title = 'Switch to dark mode';
+      }
+    }
+
+    try {
+      chrome.storage?.sync?.set({ theme: currentTheme });
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }
+
+  function loadThemePreference() {
+    try {
+      chrome.storage?.sync?.get(['theme'], (result) => {
+        if (chrome.runtime.lastError) {
+          applyTheme('light');
+          return;
+        }
+        const saved = result && typeof result.theme === 'string' ? result.theme : 'light';
+        applyTheme(saved);
+      });
+    } catch (e) {
+      applyTheme('light');
+    }
+  }
 
   // Show a specific state
   function showState(state) {
@@ -514,5 +554,12 @@
   openInPowerAutomateBtn.addEventListener('click', openInPowerAutomate);
 
   // Start
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+    });
+  }
+
+  loadThemePreference();
   init();
 })();
