@@ -20,7 +20,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       type: 'CONTEXT_UPDATED',
       context: message.context,
       tabId: tabId
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   // Get context for a specific tab
@@ -87,7 +87,7 @@ async function fetchRunsWithToken(tabId, environmentId, flowId) {
                   return token;
                 }
               }
-            } catch (e) {}
+            } catch (e) { }
           }
         }
 
@@ -110,16 +110,18 @@ async function fetchRunsWithToken(tabId, environmentId, flowId) {
                   return token;
                 }
               }
-            } catch (e) {}
+            } catch (e) { }
           }
         }
 
         // Fallback: look for any valid-looking access token
-        const allStorage = { ...Object.fromEntries(
-          [...Array(sessionStorage.length)].map((_, i) => [sessionStorage.key(i), sessionStorage.getItem(sessionStorage.key(i))])
-        ), ...Object.fromEntries(
-          [...Array(localStorage.length)].map((_, i) => [localStorage.key(i), localStorage.getItem(localStorage.key(i))])
-        )};
+        const allStorage = {
+          ...Object.fromEntries(
+            [...Array(sessionStorage.length)].map((_, i) => [sessionStorage.key(i), sessionStorage.getItem(sessionStorage.key(i))])
+          ), ...Object.fromEntries(
+            [...Array(localStorage.length)].map((_, i) => [localStorage.key(i), localStorage.getItem(localStorage.key(i))])
+          )
+        };
 
         for (const [key, value] of Object.entries(allStorage)) {
           if (!value) continue;
@@ -130,7 +132,7 @@ async function fetchRunsWithToken(tabId, environmentId, flowId) {
               // Long tokens are likely JWT access tokens
               return token;
             }
-          } catch (e) {}
+          } catch (e) { }
         }
 
         return null;
@@ -238,7 +240,7 @@ async function getToken(tabId) {
               const parsed = JSON.parse(value);
               const token = parsed.secret || parsed.accessToken;
               if (token && token.length > 100) return token;
-            } catch (e) {}
+            } catch (e) { }
           }
         }
 
@@ -252,7 +254,7 @@ async function getToken(tabId) {
               const parsed = JSON.parse(value);
               const token = parsed.secret || parsed.accessToken;
               if (token && token.length > 100) return token;
-            } catch (e) {}
+            } catch (e) { }
           }
         }
 
@@ -281,7 +283,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
       type: 'ACTIVE_TAB_CHANGED',
       tabId: activeInfo.tabId,
       url: tab.url
-    }).catch(() => {});
+    }).catch(() => { });
   } catch (e) {
     // Ignore errors from tabs that may have been closed or are inaccessible
   }
