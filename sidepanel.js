@@ -462,6 +462,7 @@
 
   // Listen for context updates
   chrome.runtime.onMessage.addListener((message) => {
+    // Flow context changed within the same tab
     if (message.type === 'CONTEXT_UPDATED' && message.tabId === currentTabId) {
       currentContext = message.context;
       if (currentContext) {
@@ -479,6 +480,20 @@
         backToEditorEl.classList.add('hidden');
         showState(noFlowEl);
       }
+    }
+
+    // Active browser tab changed - reload state for the new tab
+    if (message.type === 'ACTIVE_TAB_CHANGED') {
+      // Reset state so the panel reflects the newly active tab
+      currentTabId = message.tabId;
+      currentContext = null;
+      flowEditorUrl = null;
+      actionsCache.clear();
+      runsById = new Map();
+      showState(loadingEl);
+
+      // Re-run initialization to load context and runs for the new tab
+      init();
     }
   });
 

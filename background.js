@@ -271,6 +271,22 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   tabContexts.delete(tabId);
 });
 
+// Notify extension when the active tab changes so UI can refresh
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+
+    // Let extension pages (e.g. side panel) know the active tab changed
+    chrome.runtime.sendMessage({
+      type: 'ACTIVE_TAB_CHANGED',
+      tabId: activeInfo.tabId,
+      url: tab.url
+    }).catch(() => {});
+  } catch (e) {
+    // Ignore errors from tabs that may have been closed or are inaccessible
+  }
+});
+
 // Enable side panel when clicking the action button
 chrome.action.onClicked.addListener((tab) => {
   chrome.sidePanel.open({ tabId: tab.id });
