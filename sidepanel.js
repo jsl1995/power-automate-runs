@@ -202,6 +202,12 @@
                 </svg>
               </button>
             ` : ''}
+            <button class="rerun-btn" title="Resubmit this flow run">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M2 8a6 6 0 1 1 6 6" stroke="currentColor" stroke-width="2" fill="none"/>
+                <path d="M2 4v4h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
             <button class="open-btn" title="Open flow run">
               <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M6 4l4 4-4 4"/>
@@ -260,6 +266,16 @@
       });
     });
 
+    // Add click handlers for rerun buttons
+    runsListEl.querySelectorAll('.rerun-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const container = btn.closest('.run-container');
+        const runId = container.dataset.runId;
+        rerunFlow(runId, btn);
+      });
+    });
+
     showState(runsListEl);
   }
 
@@ -305,6 +321,52 @@
         </svg>
       `;
       alert(error.message || 'Failed to cancel run');
+    }
+  }
+
+  // Rerun a flow
+  async function rerunFlow(runId, btn) {
+    if (!currentContext || !currentTabId) return;
+
+    // Disable button and show loading state
+    btn.disabled = true;
+    btn.classList.add('rerunning');
+    btn.innerHTML = '<div class="spinner-tiny"></div>';
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'RESUBMIT_RUN',
+        environmentId: currentContext.environmentId,
+        flowId: currentContext.flowId,
+        runId: runId,
+        tabId: currentTabId
+      });
+
+      if (response && response.success) {
+        // Refresh the runs list to show new run
+        await loadRuns();
+      } else {
+        // Re-enable button on error
+        btn.disabled = false;
+        btn.classList.remove('rerunning');
+        btn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M2 8a6 6 0 1 1 6 6" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M2 4v4h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        `;
+        alert(response?.error || 'Failed to resubmit run');
+      }
+    } catch (error) {
+      btn.disabled = false;
+      btn.classList.remove('rerunning');
+      btn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M2 8a6 6 0 1 1 6 6" stroke="currentColor" stroke-width="2" fill="none"/>
+          <path d="M2 4v4h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+      alert(error.message || 'Failed to resubmit run');
     }
   }
 

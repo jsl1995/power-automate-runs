@@ -62,6 +62,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Resubmit a flow run
+  if (message.type === 'RESUBMIT_RUN') {
+    const { environmentId, flowId, runId, tabId } = message;
+
+    resubmitRun(tabId, environmentId, flowId, runId)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+
+    return true;
+  }
+
   return false;
 });
 
@@ -254,6 +265,38 @@ async function cancelRun(tabId, environmentId, flowId, runId) {
     if (!response.ok) {
       if (response.status === 400) {
         return { success: false, error: 'Run cannot be cancelled (may have already completed).' };
+      }
+      return { success: false, error: `API error: ${response.status}` };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Resubmit a flow run
+async function resubmitRun(tabId, environmentId, flowId, runId) {
+  const token = await getToken(tabId);
+
+  if (!token) {
+    return { success: false, error: 'Could not find auth token.' };
+  }
+
+  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/triggers/manual/runs/${runId}/resubmit?api-version=2016-11-01`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 400) {
+        return { success: false, error: 'Run cannot be resubmitted.' };
       }
       return { success: false, error: `API error: ${response.status}` };
     }
