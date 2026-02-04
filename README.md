@@ -32,7 +32,8 @@ A Chrome extension that displays run history for Power Automate Cloud Flows dire
 - **Return to editor** - Quick button to return to the flow editor after viewing a run
 - **Auto-detection** - Automatically detects when you're viewing a flow
 - **Power Apps support** - Detects flows opened in Power Apps and offers redirect to Power Automate
- - **Follows active tab** - Side panel automatically reloads when you switch tabs, so it always reflects the currently active flow
+- **Follows active tab** - Side panel automatically reloads when you switch tabs, so it always reflects the currently active flow
+- **Dark mode** - Toggle between light and dark themes from the side panel header; your preference is remembered across sessions
 
 ## Installation
 
