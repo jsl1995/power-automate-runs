@@ -3,6 +3,14 @@
 // Store current flow context per tab
 const tabContexts = new Map();
 
+// Handle extension install/update
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    // First install - ensure walkthrough flags are cleared so it shows
+    chrome.storage.local.remove(['walkthroughCompleted', 'walkthroughDismissed']);
+  }
+});
+
 // Listen for messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Flow context update from content script

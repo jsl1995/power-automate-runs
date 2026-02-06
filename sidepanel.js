@@ -561,6 +561,7 @@
       if (response && response.success) {
         runsById = new Map(response.runs.map(run => [run.name, run]));
         renderRuns(response.runs);
+        onRunsLoaded(); // Notify walkthrough that runs are available
       } else {
         errorMessageEl.textContent = response?.error || 'Failed to load runs';
         showState(errorEl);
@@ -603,6 +604,7 @@
         flowEditorUrl = getFlowEditorUrl(context);
         updateBackButton();
         loadRuns();
+        initWalkthrough(); // Start walkthrough for first-time users
       } else {
         // Fallback: derive context directly from the active tab URL
         const urlContext = extractContextFromUrl(tab.url);
@@ -616,6 +618,7 @@
           flowEditorUrl = getFlowEditorUrl(urlContext);
           updateBackButton();
           loadRuns();
+          initWalkthrough(); // Start walkthrough for first-time users
         } else {
           showState(noFlowEl);
         }
@@ -677,6 +680,296 @@
 
   backBtn.addEventListener('click', returnToEditor);
   openInPowerAutomateBtn.addEventListener('click', openInPowerAutomate);
+
+  // ==================== WALKTHROUGH SYSTEM ====================
+  const walkthroughContainer = document.getElementById('walkthrough-container');
+  let walkthroughActive = false;
+  let walkthroughStep = 0;
+  let walkthroughRunsLoaded = false;
+
+  const walkthroughSteps = [
+    {
+      id: 'expand',
+      title: 'Expand Flow Steps',
+      description: 'Click the expand button to see all the steps that ran in this flow execution.',
+      selector: '.expand-btn',
+      arrowPosition: 'left'
+    },
+    {
+      id: 'open',
+      title: 'Open Run Details',
+      description: 'Click to open the full run details in Power Automate where you can inspect each step.',
+      selector: '.open-btn',
+      arrowPosition: 'left'
+    },
+    {
+      id: 'cancel',
+      title: 'Cancel Running Flows',
+      description: 'When a flow is running, you can cancel it here. This button only appears for active runs.',
+      selector: '.cancel-btn',
+      arrowPosition: 'left',
+      optional: true,
+      fallbackDescription: 'When a flow is running, a cancel button appears here to stop it mid-execution.'
+    },
+    {
+      id: 'resubmit',
+      title: 'Resubmit a Flow',
+      description: 'Click to resubmit the flow with the same trigger data. Great for retrying failed runs!',
+      selector: '.rerun-btn',
+      arrowPosition: 'left'
+    },
+    {
+      id: 'back',
+      title: 'Return to Flow Editor',
+      description: 'At any time, click this button to get back to the flow you\'ve been working on.',
+      selector: '#back-btn',
+      arrowPosition: 'bottom'
+    },
+    {
+      id: 'theme',
+      title: 'Dark Mode',
+      description: 'Toggle between light and dark themes to match your preference or reduce eye strain.',
+      selector: '#theme-toggle',
+      arrowPosition: 'bottom'
+    }
+  ];
+
+  // Check if walkthrough should be shown
+  async function checkWalkthroughStatus() {
+    return new Promise((resolve) => {
+      try {
+        chrome.storage?.local?.get(['walkthroughCompleted', 'walkthroughDismissed'], (result) => {
+          if (chrome.runtime.lastError) {
+            resolve({ shouldShow: false });
+            return;
+          }
+          const completed = result?.walkthroughCompleted === true;
+          const dismissed = result?.walkthroughDismissed === true;
+          resolve({ shouldShow: !completed && !dismissed });
+        });
+      } catch (e) {
+        resolve({ shouldShow: false });
+      }
+    });
+  }
+
+  // Mark walkthrough as completed
+  function completeWalkthrough() {
+    try {
+      chrome.storage?.local?.set({ walkthroughCompleted: true });
+    } catch (e) {
+      // Ignore storage errors
+    }
+    endWalkthrough();
+  }
+
+  // Mark walkthrough as dismissed
+  function dismissWalkthrough() {
+    try {
+      chrome.storage?.local?.set({ walkthroughDismissed: true });
+    } catch (e) {
+      // Ignore storage errors
+    }
+    endWalkthrough();
+  }
+
+  // Show welcome modal
+  function showWelcomeModal() {
+    walkthroughContainer.innerHTML = `
+      <div class="walkthrough-overlay"></div>
+      <div class="walkthrough-welcome">
+        <div class="walkthrough-welcome-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <h2>Welcome to Flow Run Buddy!</h2>
+        <p>Let's take a quick tour to show you how to view run history, expand steps, and manage your flows.</p>
+        <div class="walkthrough-welcome-actions">
+          <button class="walkthrough-start-btn" id="walkthrough-start">Start Tour</button>
+          <button class="walkthrough-dismiss-btn" id="walkthrough-dismiss">Skip for now</button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('walkthrough-start').addEventListener('click', () => {
+      walkthroughActive = true;
+      walkthroughStep = 0;
+      // Wait for runs to load before showing steps
+      if (walkthroughRunsLoaded) {
+        showWalkthroughStep();
+      } else {
+        showWaitingForRuns();
+      }
+    });
+
+    document.getElementById('walkthrough-dismiss').addEventListener('click', dismissWalkthrough);
+  }
+
+  // Show waiting state while runs load
+  function showWaitingForRuns() {
+    walkthroughContainer.innerHTML = `
+      <div class="walkthrough-overlay"></div>
+      <div class="walkthrough-welcome">
+        <div class="spinner" style="margin: 0 auto 16px;"></div>
+        <h2>Loading runs...</h2>
+        <p>Please wait while we load your flow runs to continue the tour.</p>
+      </div>
+    `;
+  }
+
+  // Show current walkthrough step
+  function showWalkthroughStep() {
+    if (!walkthroughActive || walkthroughStep >= walkthroughSteps.length) {
+      completeWalkthrough();
+      return;
+    }
+
+    const step = walkthroughSteps[walkthroughStep];
+    const targetEl = document.querySelector(step.selector);
+
+    // Handle optional steps (like cancel button which may not be present)
+    if (!targetEl && step.optional) {
+      // Show a general tooltip explaining this feature
+      showOptionalStepTooltip(step);
+      return;
+    }
+
+    if (!targetEl) {
+      // Skip to next step if target not found
+      walkthroughStep++;
+      showWalkthroughStep();
+      return;
+    }
+
+    // Clear previous highlights
+    document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+      el.classList.remove('walkthrough-highlight');
+    });
+
+    // Highlight the target element
+    targetEl.classList.add('walkthrough-highlight');
+
+    // Get position for tooltip - use element position relative to sidepanel
+    const rect = targetEl.getBoundingClientRect();
+    const containerRect = walkthroughContainer.getBoundingClientRect();
+    const tooltipTop = rect.bottom - containerRect.top + 12;
+    // Calculate arrow position to point at the center of the target element
+    const arrowLeft = Math.max(20, Math.min(rect.left - containerRect.left + rect.width / 2 - 6, containerRect.width - 32));
+
+    // Build dots indicator
+    const dotsHtml = walkthroughSteps.map((_, i) => {
+      let dotClass = 'walkthrough-dot';
+      if (i < walkthroughStep) dotClass += ' completed';
+      else if (i === walkthroughStep) dotClass += ' active';
+      return `<div class="${dotClass}"></div>`;
+    }).join('');
+
+    walkthroughContainer.innerHTML = `
+      <div class="walkthrough-overlay"></div>
+      <div class="walkthrough-tooltip arrow-top" style="top: ${tooltipTop}px; --arrow-left: ${arrowLeft}px;">
+        <div class="walkthrough-step-indicator">
+          <div class="walkthrough-step-badge">${walkthroughStep + 1}</div>
+          <div class="walkthrough-step-count">of ${walkthroughSteps.length}</div>
+        </div>
+        <div class="walkthrough-title">${step.title}</div>
+        <div class="walkthrough-description">${step.description}</div>
+        <div class="walkthrough-actions">
+          <button class="walkthrough-skip" id="walkthrough-skip">Skip tour</button>
+          <div class="walkthrough-dots">${dotsHtml}</div>
+          <button class="walkthrough-next" id="walkthrough-next">
+            ${walkthroughStep === walkthroughSteps.length - 1 ? 'Finish' : 'Next'}
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Re-highlight (in case innerHTML cleared it)
+    targetEl.classList.add('walkthrough-highlight');
+
+    document.getElementById('walkthrough-skip').addEventListener('click', dismissWalkthrough);
+    document.getElementById('walkthrough-next').addEventListener('click', () => {
+      walkthroughStep++;
+      showWalkthroughStep();
+    });
+  }
+
+  // Show tooltip for optional steps (like cancel button when no running flows)
+  function showOptionalStepTooltip(step) {
+    // Use the first run item as reference point
+    const runItem = document.querySelector('.run-item');
+    if (!runItem) {
+      walkthroughStep++;
+      showWalkthroughStep();
+      return;
+    }
+
+    const rect = runItem.getBoundingClientRect();
+    const containerRect = walkthroughContainer.getBoundingClientRect();
+    const tooltipTop = rect.bottom - containerRect.top + 12;
+
+    const dotsHtml = walkthroughSteps.map((_, i) => {
+      let dotClass = 'walkthrough-dot';
+      if (i < walkthroughStep) dotClass += ' completed';
+      else if (i === walkthroughStep) dotClass += ' active';
+      return `<div class="${dotClass}"></div>`;
+    }).join('');
+
+    const description = step.fallbackDescription || step.description;
+
+    walkthroughContainer.innerHTML = `
+      <div class="walkthrough-overlay"></div>
+      <div class="walkthrough-tooltip arrow-top" style="top: ${tooltipTop}px; --arrow-left: 24px;">
+        <div class="walkthrough-step-indicator">
+          <div class="walkthrough-step-badge">${walkthroughStep + 1}</div>
+          <div class="walkthrough-step-count">of ${walkthroughSteps.length}</div>
+        </div>
+        <div class="walkthrough-title">${step.title}</div>
+        <div class="walkthrough-description">${description}</div>
+        <div class="walkthrough-actions">
+          <button class="walkthrough-skip" id="walkthrough-skip">Skip tour</button>
+          <div class="walkthrough-dots">${dotsHtml}</div>
+          <button class="walkthrough-next" id="walkthrough-next">
+            ${walkthroughStep === walkthroughSteps.length - 1 ? 'Finish' : 'Next'}
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('walkthrough-skip').addEventListener('click', dismissWalkthrough);
+    document.getElementById('walkthrough-next').addEventListener('click', () => {
+      walkthroughStep++;
+      showWalkthroughStep();
+    });
+  }
+
+  // End walkthrough and cleanup
+  function endWalkthrough() {
+    walkthroughActive = false;
+    walkthroughStep = 0;
+    walkthroughContainer.innerHTML = '';
+    document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+      el.classList.remove('walkthrough-highlight');
+    });
+  }
+
+  // Called when runs are loaded - continue walkthrough if active
+  function onRunsLoaded() {
+    walkthroughRunsLoaded = true;
+    if (walkthroughActive && walkthroughStep === 0) {
+      showWalkthroughStep();
+    }
+  }
+
+  // Initialize walkthrough on first load
+  async function initWalkthrough() {
+    const { shouldShow } = await checkWalkthroughStatus();
+    if (shouldShow && currentContext && !currentContext.isPowerApps) {
+      showWelcomeModal();
+    }
+  }
+
+  // ==================== END WALKTHROUGH SYSTEM ====================
 
   // Start
   if (themeToggleBtn) {
