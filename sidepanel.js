@@ -3,6 +3,37 @@
 (function () {
   'use strict';
 
+  // Helper function to escape HTML to prevent XSS
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Helper function to show accessible notifications instead of alert()
+  function showNotification(message, type = 'error') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.setAttribute('role', 'alert');
+    notification.setAttribute('aria-live', 'assertive');
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      notification.classList.add('notification-fadeout');
+      setTimeout(() => notification.remove(), 300);
+    }, 5000);
+
+    // Allow manual dismissal
+    notification.addEventListener('click', () => {
+      notification.classList.add('notification-fadeout');
+      setTimeout(() => notification.remove(), 300);
+    });
+  }
+
   // DOM elements
   const loadingEl = document.getElementById('loading');
   const noFlowEl = document.getElementById('no-flow');
@@ -32,12 +63,12 @@
     if (currentTheme === 'dark') {
       document.body.classList.add('dark-theme');
       if (themeToggleBtn) {
-        themeToggleBtn.title = 'Switch to light mode';
+        themeToggleBtn.setAttribute('aria-label', 'Switch to light mode');
       }
     } else {
       document.body.classList.remove('dark-theme');
       if (themeToggleBtn) {
-        themeToggleBtn.title = 'Switch to dark mode';
+        themeToggleBtn.setAttribute('aria-label', 'Switch to dark mode');
       }
     }
 
@@ -176,47 +207,49 @@
       const duration = formatDuration(startTime, endTime);
       const runId = run.name;
       const isRunning = status.class === 'running';
+      const relativeTime = escapeHtml(formatRelativeTime(startTime));
+      const statusLabel = escapeHtml(status.label);
 
       return `
-        <div class="run-container" data-run-id="${runId}">
+        <div class="run-container" data-run-id="${escapeHtml(runId)}" role="listitem">
           <div class="run-item">
-            <button class="expand-btn" title="Expand to see flow steps">
-              <svg class="expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <button class="expand-btn" aria-label="Expand to see flow steps" aria-expanded="false">
+              <svg class="expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <path d="M4 6l4 4 4-4"/>
               </svg>
             </button>
-            <div class="status-icon ${status.class}" title="${status.label}">
+            <div class="status-icon ${status.class}" aria-label="${statusLabel}">
               ${status.icon}
             </div>
             <div class="run-details">
-              <div class="run-time">${formatRelativeTime(startTime)}</div>
+              <div class="run-time">${relativeTime}</div>
               <div class="run-meta">
-                <span class="run-status">${status.label}</span>
-                ${duration ? `<span class="run-duration">· ${duration}</span>` : ''}
+                <span class="run-status">${statusLabel}</span>
+                ${duration ? `<span class="run-duration">· ${escapeHtml(duration)}</span>` : ''}
               </div>
             </div>
             ${isRunning ? `
-              <button class="cancel-btn" title="Cancel run">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <button class="cancel-btn" aria-label="Cancel run">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                   <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" fill="none"/>
                 </svg>
               </button>
             ` : ''}
-            <button class="rerun-btn" title="Resubmit this flow run">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <button class="rerun-btn" aria-label="Resubmit this flow run">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <path d="M2 8a6 6 0 1 1 6 6" stroke="currentColor" stroke-width="2" fill="none"/>
                 <path d="M2 4v4h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
-            <button class="open-btn" title="Open flow run">
-              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <button class="open-btn" aria-label="Open flow run details">
+              <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <path d="M6 4l4 4-4 4"/>
               </svg>
             </button>
           </div>
-          <div class="actions-container hidden">
+          <div class="actions-container hidden" aria-live="polite">
             <div class="actions-loading">
-              <div class="spinner-small"></div>
+              <div class="spinner-small" role="status" aria-label="Loading"></div>
               Loading steps...
             </div>
           </div>
@@ -306,21 +339,21 @@
         btn.disabled = false;
         btn.classList.remove('cancelling');
         btn.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
             <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" fill="none"/>
           </svg>
         `;
-        alert(response?.error || 'Failed to cancel run');
+        showNotification(response?.error || 'Failed to cancel run', 'error');
       }
     } catch (error) {
       btn.disabled = false;
       btn.classList.remove('cancelling');
       btn.innerHTML = `
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
           <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" fill="none"/>
         </svg>
       `;
-      alert(error.message || 'Failed to cancel run');
+      showNotification(error.message || 'Failed to cancel run', 'error');
     }
   }
 
@@ -350,23 +383,23 @@
         btn.disabled = false;
         btn.classList.remove('rerunning');
         btn.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
             <path d="M2 8a6 6 0 1 1 6 6" stroke="currentColor" stroke-width="2" fill="none"/>
             <path d="M2 4v4h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         `;
-        alert(response?.error || 'Failed to resubmit run');
+        showNotification(response?.error || 'Failed to resubmit run', 'error');
       }
     } catch (error) {
       btn.disabled = false;
       btn.classList.remove('rerunning');
       btn.innerHTML = `
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
           <path d="M2 8a6 6 0 1 1 6 6" stroke="currentColor" stroke-width="2" fill="none"/>
           <path d="M2 4v4h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       `;
-      alert(error.message || 'Failed to resubmit run');
+      showNotification(error.message || 'Failed to resubmit run', 'error');
     }
   }
 
@@ -374,6 +407,7 @@
   async function toggleExpand(container, runId) {
     const actionsContainer = container.querySelector('.actions-container');
     const expandIcon = container.querySelector('.expand-icon');
+    const expandBtn = container.querySelector('.expand-btn');
     const isExpanded = container.classList.contains('expanded');
 
     if (isExpanded) {
@@ -381,11 +415,17 @@
       container.classList.remove('expanded');
       actionsContainer.classList.add('hidden');
       expandIcon.style.transform = '';
+      if (expandBtn) {
+        expandBtn.setAttribute('aria-expanded', 'false');
+      }
     } else {
       // Expand
       container.classList.add('expanded');
       actionsContainer.classList.remove('hidden');
       expandIcon.style.transform = 'rotate(-180deg)';
+      if (expandBtn) {
+        expandBtn.setAttribute('aria-expanded', 'true');
+      }
 
       const run = runsById.get(runId);
       const runError = getRunError(run);
@@ -439,22 +479,24 @@
     }
 
     const headerHtml = runError ? `
-      <div class="actions-run-error" title="${runError}">
-        ${runError}
+      <div class="actions-run-error" role="alert">
+        ${escapeHtml(runError)}
       </div>
     ` : '';
 
     const actionsHtml = actions.map(action => {
       const status = getStatusInfo(action.status);
       const errorMessage = action.error?.message || action.error?.details?.[0]?.message;
+      const actionName = escapeHtml(action.name);
+      const statusLabel = escapeHtml(status.label);
       return `
         <div class="action-item">
-          <div class="action-status ${status.class}">${status.icon}</div>
+          <div class="action-status ${status.class}" aria-label="${statusLabel}">${status.icon}</div>
           <div class="action-main">
-            <div class="action-name">${action.name}</div>
+            <div class="action-name">${actionName}</div>
             ${status.class === 'failed' && errorMessage ? `
-              <div class="action-error" title="${errorMessage}">
-                ${errorMessage}
+              <div class="action-error" role="alert">
+                ${escapeHtml(errorMessage)}
               </div>
             ` : ''}
           </div>

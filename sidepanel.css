@@ -824,3 +824,83 @@ body.dark-theme .theme-icon {
   background: var(--color-surface-subtle);
   color: var(--color-text);
 }
+/* Accessible notification system */
+.notification {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 200;
+  cursor: pointer;
+  animation: slideInDown 0.3s ease-out;
+}
+
+.notification-error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+.notification-success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+}
+
+.notification-fadeout {
+  animation: slideOutUp 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOutUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+/* Focus visible styles for better keyboard navigation */
+button:focus-visible,
+.expand-btn:focus-visible,
+.open-btn:focus-visible,
+.cancel-btn:focus-visible,
+.rerun-btn:focus-visible,
+.theme-toggle:focus-visible,
+.refresh-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Skip to main content link for screen readers */
+.skip-to-main {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--color-primary);
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 1000;
+}
+
+.skip-to-main:focus {
+  top: 0;
+}
