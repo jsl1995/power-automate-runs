@@ -198,6 +198,51 @@ body.dark-theme .theme-icon {
   background: var(--color-primary-active);
 }
 
+/* Export footer */
+.export-footer {
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.export-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.export-btn:hover {
+  background: var(--color-surface-subtle);
+  border-color: var(--color-text-muted);
+}
+
+.export-btn:active {
+  background: var(--color-surface-alt);
+}
+
+.export-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.export-btn svg {
+  flex-shrink: 0;
+}
+
 .back-to-editor {
   padding: 8px 16px;
   background: var(--color-surface);

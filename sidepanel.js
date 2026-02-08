@@ -48,6 +48,8 @@
   const backToEditorEl = document.getElementById('back-to-editor');
   const backBtn = document.getElementById('back-btn');
   const themeToggleBtn = document.getElementById('theme-toggle');
+  const exportFooterEl = document.getElementById('export-footer');
+  const exportBtn = document.getElementById('export-btn');
 
   // Current state
   let currentContext = null;
@@ -566,6 +568,60 @@
     }
   }
 
+  // Update export footer visibility
+  function updateExportFooter() {
+    if (currentContext && !currentContext.isPowerApps) {
+      exportFooterEl.classList.remove('hidden');
+    } else {
+      exportFooterEl.classList.add('hidden');
+    }
+  }
+
+  // Export flow definition as JSON
+  async function exportFlowDefinition() {
+    if (!currentContext || !currentTabId) return;
+
+    exportBtn.disabled = true;
+    const originalText = exportBtn.innerHTML;
+    exportBtn.innerHTML = '<div class="spinner-small"></div> Exporting...';
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'FETCH_FLOW_DEFINITION',
+        environmentId: currentContext.environmentId,
+        flowId: currentContext.flowId,
+        tabId: currentTabId
+      });
+
+      if (response && response.success) {
+        const flow = response.flow;
+        const flowName = flow.properties?.displayName || flow.name || 'flow';
+        const safeFileName = flowName.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+        const fileName = `${safeFileName}_definition.json`;
+
+        // Create and download the JSON file
+        const jsonString = JSON.stringify(flow, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        alert(response?.error || 'Failed to export flow definition');
+      }
+    } catch (error) {
+      alert(error.message || 'Failed to export flow definition');
+    } finally {
+      exportBtn.disabled = false;
+      exportBtn.innerHTML = originalText;
+    }
+  }
+
   // Open run in current tab
   function openRun(runId) {
     if (!currentContext) return;
@@ -639,12 +695,14 @@
         // Check if on Power Apps - show redirect message
         if (context.isPowerApps) {
           backToEditorEl.classList.add('hidden');
+          exportFooterEl.classList.add('hidden');
           showState(powerAppsRedirectEl);
           return;
         }
         // Always store/update the editor URL from context
         flowEditorUrl = getFlowEditorUrl(context);
         updateBackButton();
+        updateExportFooter();
         loadRuns();
         initWalkthrough(); // Start walkthrough for first-time users
       } else {
@@ -654,19 +712,23 @@
           currentContext = urlContext;
           if (urlContext.isPowerApps) {
             backToEditorEl.classList.add('hidden');
+            exportFooterEl.classList.add('hidden');
             showState(powerAppsRedirectEl);
             return;
           }
           flowEditorUrl = getFlowEditorUrl(urlContext);
           updateBackButton();
+          updateExportFooter();
           loadRuns();
           initWalkthrough(); // Start walkthrough for first-time users
         } else {
           showState(noFlowEl);
+          updateExportFooter();
         }
       }
     } catch (error) {
       showState(noFlowEl);
+      updateExportFooter();
     }
   }
 
@@ -679,15 +741,18 @@
         // Check if on Power Apps - show redirect message
         if (currentContext.isPowerApps) {
           backToEditorEl.classList.add('hidden');
+          exportFooterEl.classList.add('hidden');
           showState(powerAppsRedirectEl);
           return;
         }
         // Always keep the editor URL updated
         flowEditorUrl = getFlowEditorUrl(currentContext);
         updateBackButton();
+        updateExportFooter();
         loadRuns();
       } else {
         backToEditorEl.classList.add('hidden');
+        updateExportFooter();
         showState(noFlowEl);
       }
     }
@@ -701,6 +766,7 @@
       actionsCache.clear();
       runsById = new Map();
       showState(loadingEl);
+      exportFooterEl.classList.add('hidden');
 
       // Re-run initialization to load context and runs for the new tab
       init();
@@ -722,6 +788,7 @@
 
   backBtn.addEventListener('click', returnToEditor);
   openInPowerAutomateBtn.addEventListener('click', openInPowerAutomate);
+  exportBtn.addEventListener('click', exportFlowDefinition);
 
   // ==================== WALKTHROUGH SYSTEM ====================
   const walkthroughContainer = document.getElementById('walkthrough-container');

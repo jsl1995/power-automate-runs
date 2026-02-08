@@ -81,6 +81,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Fetch flow definition for export
+  if (message.type === 'FETCH_FLOW_DEFINITION') {
+    const { environmentId, flowId, tabId } = message;
+
+    fetchFlowDefinition(tabId, environmentId, flowId)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+
+    return true;
+  }
+
   return false;
 });
 
@@ -310,6 +321,36 @@ async function resubmitRun(tabId, environmentId, flowId, runId) {
     }
 
     return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Fetch flow definition
+async function fetchFlowDefinition(tabId, environmentId, flowId) {
+  const token = await getToken(tabId);
+
+  if (!token) {
+    return { success: false, error: 'Could not find auth token.' };
+  }
+
+  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}?api-version=2016-11-01`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `API error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    return { success: true, flow: data };
   } catch (error) {
     return { success: false, error: error.message };
   }
