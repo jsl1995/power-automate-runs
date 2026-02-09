@@ -48,8 +48,11 @@
   const backToEditorEl = document.getElementById('back-to-editor');
   const backBtn = document.getElementById('back-btn');
   const themeToggleBtn = document.getElementById('theme-toggle');
-  const exportFooterEl = document.getElementById('export-footer');
-  const exportBtn = document.getElementById('export-btn');
+  const exportDropdownEl = document.getElementById('export-dropdown');
+  const exportMenuBtn = document.getElementById('export-menu-btn');
+  const exportMenuEl = document.getElementById('export-menu');
+  const exportRunsBtn = document.getElementById('export-runs-btn');
+  const exportFlowBtn = document.getElementById('export-flow-btn');
 
   // Current state
   let currentContext = null;
@@ -568,12 +571,29 @@
     }
   }
 
-  // Update export footer visibility
-  function updateExportFooter() {
-    if (currentContext && !currentContext.isPowerApps) {
-      exportFooterEl.classList.remove('hidden');
+  // Export dropdown helpers
+  function toggleExportMenu() {
+    const isOpen = !exportMenuEl.classList.contains('hidden');
+    if (isOpen) {
+      closeExportMenu();
     } else {
-      exportFooterEl.classList.add('hidden');
+      exportMenuEl.classList.remove('hidden');
+      exportMenuBtn.setAttribute('aria-expanded', 'true');
+    }
+  }
+
+  function closeExportMenu() {
+    exportMenuEl.classList.add('hidden');
+    exportMenuBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  // Update export dropdown visibility
+  function updateExportMenu() {
+    if (currentContext && !currentContext.isPowerApps) {
+      exportDropdownEl.classList.remove('hidden');
+    } else {
+      exportDropdownEl.classList.add('hidden');
+      closeExportMenu();
     }
   }
 
@@ -581,9 +601,9 @@
   async function exportFlowDefinition() {
     if (!currentContext || !currentTabId) return;
 
-    exportBtn.disabled = true;
-    const originalText = exportBtn.innerHTML;
-    exportBtn.innerHTML = '<div class="spinner-small"></div> Exporting...';
+    closeExportMenu();
+    exportMenuBtn.disabled = true;
+    exportMenuBtn.classList.add('exporting');
 
     try {
       const response = await chrome.runtime.sendMessage({
@@ -599,7 +619,6 @@
         const safeFileName = flowName.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
         const fileName = `${safeFileName}_definition.json`;
 
-        // Create and download the JSON file
         const jsonString = JSON.stringify(flow, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -612,13 +631,183 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } else {
-        alert(response?.error || 'Failed to export flow definition');
+        showNotification(response?.error || 'Failed to export flow definition', 'error');
       }
     } catch (error) {
-      alert(error.message || 'Failed to export flow definition');
+      showNotification(error.message || 'Failed to export flow definition', 'error');
     } finally {
-      exportBtn.disabled = false;
-      exportBtn.innerHTML = originalText;
+      exportMenuBtn.disabled = false;
+      exportMenuBtn.classList.remove('exporting');
+    }
+  }
+
+  // Sanitize Excel sheet name (max 31 chars, no invalid chars)
+  function sanitizeSheetName(name) {
+    return name.replace(/[\\/?*[\]:]/g, '').substring(0, 31) || 'Sheet';
+  }
+
+  // Format a date for sheet names (e.g. "Jan 15 10.30")
+  function formatSheetDate(dateString) {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (isNaN(d)) return '';
+    const month = d.toLocaleString('en', { month: 'short' });
+    const day = d.getDate();
+    const hours = d.getHours().toString().padStart(2, '0');
+    const mins = d.getMinutes().toString().padStart(2, '0');
+    return `${month} ${day} ${hours}.${mins}`;
+  }
+
+  // Set column widths on a worksheet based on content
+  function autoFitColumns(ws, data) {
+    const colWidths = [];
+    for (const row of data) {
+      row.forEach((cell, i) => {
+        const len = cell != null ? String(cell).length : 0;
+        colWidths[i] = Math.min(Math.max(colWidths[i] || 0, len), 50);
+      });
+    }
+    ws['!cols'] = colWidths.map(w => ({ wch: w + 2 }));
+  }
+
+  // Export run history as Excel workbook
+  async function exportRunHistory() {
+    if (!currentContext || !currentTabId) return;
+    if (runsById.size === 0) {
+      showNotification('No runs to export', 'error');
+      return;
+    }
+
+    closeExportMenu();
+    exportMenuBtn.disabled = true;
+    exportMenuBtn.classList.add('exporting');
+
+    try {
+      // Try to get the flow name for the filename
+      let flowName = currentContext.flowId;
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: 'FETCH_FLOW_DEFINITION',
+          environmentId: currentContext.environmentId,
+          flowId: currentContext.flowId,
+          tabId: currentTabId
+        });
+        if (response && response.success) {
+          flowName = response.flow.properties?.displayName || response.flow.name || flowName;
+        }
+      } catch (e) {
+        // Fall back to flow ID
+      }
+
+      // Fetch actions for all runs in parallel
+      const runs = Array.from(runsById.values());
+      const actionsResults = await Promise.all(runs.map(async (run) => {
+        const runId = run.name;
+        if (actionsCache.has(runId)) {
+          return { runId, actions: actionsCache.get(runId) };
+        }
+        try {
+          const resp = await chrome.runtime.sendMessage({
+            type: 'FETCH_RUN_ACTIONS',
+            environmentId: currentContext.environmentId,
+            flowId: currentContext.flowId,
+            runId: runId,
+            tabId: currentTabId
+          });
+          if (resp && resp.success) {
+            actionsCache.set(runId, resp.actions);
+            return { runId, actions: resp.actions };
+          }
+        } catch (e) {
+          // Skip actions for this run
+        }
+        return { runId, actions: [] };
+      }));
+
+      const actionsByRun = new Map(actionsResults.map(r => [r.runId, r.actions]));
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+
+      // --- Summary sheet ---
+      const summaryHeaders = ['#', 'Run ID', 'Status', 'Start Time', 'End Time', 'Duration', 'Error'];
+      const summaryRows = runs.map((run, i) => [
+        i + 1,
+        run.name,
+        run.properties?.status || '',
+        run.properties?.startTime || '',
+        run.properties?.endTime || '',
+        formatDuration(run.properties?.startTime, run.properties?.endTime) || '',
+        getRunError(run) || ''
+      ]);
+      const summaryData = [summaryHeaders, ...summaryRows];
+      const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+      autoFitColumns(summaryWs, summaryData);
+      XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+      // --- Per-run sheets ---
+      const usedNames = new Set(['Summary']);
+      runs.forEach((run, i) => {
+        const status = run.properties?.status || 'Unknown';
+        const dateStr = formatSheetDate(run.properties?.startTime);
+        let sheetName = sanitizeSheetName(`${i + 1}. ${status} ${dateStr}`);
+
+        // Ensure uniqueness
+        let suffix = 2;
+        const baseName = sheetName;
+        while (usedNames.has(sheetName)) {
+          sheetName = sanitizeSheetName(`${baseName} (${suffix})`);
+          suffix++;
+        }
+        usedNames.add(sheetName);
+
+        // Run info header rows
+        const runData = [
+          ['Run ID', run.name],
+          ['Status', status],
+          ['Start Time', run.properties?.startTime || ''],
+          ['End Time', run.properties?.endTime || ''],
+          ['Duration', formatDuration(run.properties?.startTime, run.properties?.endTime) || ''],
+          ['Error', getRunError(run) || ''],
+          [], // blank row
+        ];
+
+        // Steps table
+        const actions = actionsByRun.get(run.name) || [];
+        if (actions.length > 0) {
+          runData.push(['Step Name', 'Status', 'Error']);
+          for (const action of actions) {
+            const stepError = action.error?.message || action.error?.details?.[0]?.message || '';
+            runData.push([action.name || '', action.status || '', stepError]);
+          }
+        } else {
+          runData.push(['No steps found']);
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(runData);
+        autoFitColumns(ws, runData);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      });
+
+      // Write and download
+      const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const safeFileName = flowName.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+      const fileName = `${safeFileName}_run_history.xlsx`;
+
+      const blob = new Blob([wbOut], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      showNotification(error.message || 'Failed to export run history', 'error');
+    } finally {
+      exportMenuBtn.disabled = false;
+      exportMenuBtn.classList.remove('exporting');
     }
   }
 
@@ -695,14 +884,14 @@
         // Check if on Power Apps - show redirect message
         if (context.isPowerApps) {
           backToEditorEl.classList.add('hidden');
-          exportFooterEl.classList.add('hidden');
+          exportDropdownEl.classList.add('hidden');
           showState(powerAppsRedirectEl);
           return;
         }
         // Always store/update the editor URL from context
         flowEditorUrl = getFlowEditorUrl(context);
         updateBackButton();
-        updateExportFooter();
+        updateExportMenu();
         loadRuns();
         initWalkthrough(); // Start walkthrough for first-time users
       } else {
@@ -712,23 +901,23 @@
           currentContext = urlContext;
           if (urlContext.isPowerApps) {
             backToEditorEl.classList.add('hidden');
-            exportFooterEl.classList.add('hidden');
+            exportDropdownEl.classList.add('hidden');
             showState(powerAppsRedirectEl);
             return;
           }
           flowEditorUrl = getFlowEditorUrl(urlContext);
           updateBackButton();
-          updateExportFooter();
+          updateExportMenu();
           loadRuns();
           initWalkthrough(); // Start walkthrough for first-time users
         } else {
           showState(noFlowEl);
-          updateExportFooter();
+          updateExportMenu();
         }
       }
     } catch (error) {
       showState(noFlowEl);
-      updateExportFooter();
+      updateExportMenu();
     }
   }
 
@@ -741,18 +930,18 @@
         // Check if on Power Apps - show redirect message
         if (currentContext.isPowerApps) {
           backToEditorEl.classList.add('hidden');
-          exportFooterEl.classList.add('hidden');
+          exportDropdownEl.classList.add('hidden');
           showState(powerAppsRedirectEl);
           return;
         }
         // Always keep the editor URL updated
         flowEditorUrl = getFlowEditorUrl(currentContext);
         updateBackButton();
-        updateExportFooter();
+        updateExportMenu();
         loadRuns();
       } else {
         backToEditorEl.classList.add('hidden');
-        updateExportFooter();
+        updateExportMenu();
         showState(noFlowEl);
       }
     }
@@ -766,7 +955,7 @@
       actionsCache.clear();
       runsById = new Map();
       showState(loadingEl);
-      exportFooterEl.classList.add('hidden');
+      exportDropdownEl.classList.add('hidden');
 
       // Re-run initialization to load context and runs for the new tab
       init();
@@ -788,7 +977,23 @@
 
   backBtn.addEventListener('click', returnToEditor);
   openInPowerAutomateBtn.addEventListener('click', openInPowerAutomate);
-  exportBtn.addEventListener('click', exportFlowDefinition);
+  exportMenuBtn.addEventListener('click', toggleExportMenu);
+  exportRunsBtn.addEventListener('click', exportRunHistory);
+  exportFlowBtn.addEventListener('click', exportFlowDefinition);
+
+  // Close export menu on outside click
+  document.addEventListener('click', (e) => {
+    if (!exportDropdownEl.contains(e.target)) {
+      closeExportMenu();
+    }
+  });
+
+  // Close export menu on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeExportMenu();
+    }
+  });
 
   // ==================== WALKTHROUGH SYSTEM ====================
   const walkthroughContainer = document.getElementById('walkthrough-container');

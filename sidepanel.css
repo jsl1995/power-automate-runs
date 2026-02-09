@@ -198,49 +198,95 @@ body.dark-theme .theme-icon {
   background: var(--color-primary-active);
 }
 
-/* Export footer */
-.export-footer {
-  padding: 12px 16px;
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
+/* Export dropdown */
+.export-dropdown {
+  position: relative;
 }
 
-.export-btn {
+.export-menu-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 16px;
-  border: 1px solid var(--color-border);
+  gap: 2px;
+  height: 32px;
+  padding: 0 6px;
+  border: none;
   border-radius: 4px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 14px;
-  font-weight: 500;
+  background: transparent;
+  color: var(--color-icon-muted);
   cursor: pointer;
-  transition: background 0.1s, border-color 0.1s;
+  font-size: 12px;
+  font-family: inherit;
+  transition: background 0.1s, color 0.1s;
 }
 
-.export-btn:hover {
+.export-menu-btn:hover {
   background: var(--color-surface-subtle);
-  border-color: var(--color-text-muted);
+  color: var(--color-text);
 }
 
-.export-btn:active {
-  background: var(--color-surface-alt);
+.export-menu-btn:active {
+  background: var(--color-border);
 }
 
-.export-btn:disabled {
+.export-menu-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.export-btn svg {
+.export-menu-btn.exporting svg:first-child {
+  animation: spin 1s linear infinite;
+}
+
+.export-caret {
+  transition: transform 0.15s ease;
+}
+
+.export-menu-btn[aria-expanded="true"] .export-caret {
+  transform: rotate(180deg);
+}
+
+.export-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 200px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  overflow: hidden;
+  animation: fadeInUp 0.15s ease-out;
+}
+
+.export-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.export-menu-item:hover {
+  background: var(--color-surface-subtle);
+}
+
+.export-menu-item:active {
+  background: var(--color-border);
+}
+
+.export-menu-item svg {
   flex-shrink: 0;
+  color: var(--color-icon-muted);
 }
 
 .back-to-editor {

@@ -13,6 +13,32 @@
     <header>
       <h1 id="panel-title">Run History</h1>
       <div class="header-actions">
+        <div id="export-dropdown" class="export-dropdown hidden">
+          <button id="export-menu-btn" class="export-menu-btn" aria-expanded="false" aria-haspopup="true" title="Export">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M8 12l-4-4h2.5V3h3v5H12L8 12z"/>
+              <path d="M14 14H2v-3h1v2h10v-2h1v3z"/>
+            </svg>
+            <svg class="export-caret" width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M4 6l4 4 4-4"/>
+            </svg>
+          </button>
+          <div id="export-menu" class="export-menu hidden" role="menu">
+            <button id="export-runs-btn" class="export-menu-item" role="menuitem">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M2 2h12v2H2V2zm0 4h12v2H2V6zm0 4h9v2H2v-2z"/>
+              </svg>
+              Run History
+            </button>
+            <button id="export-flow-btn" class="export-menu-item" role="menuitem">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M5 1h5l4 4v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+                <path d="M9 1v4h4" fill="none" stroke="currentColor" stroke-width="1"/>
+              </svg>
+              Flow Definition JSON
+            </button>
+          </div>
+        </div>
         <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
           <svg class="theme-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
             <path d="M9.5 1.5A5.5 5.5 0 1 0 14.5 10a.5.5 0 0 0-.7-.6A4 4 0 0 1 9.1 2.2.5.5 0 0 0 9.5 1.5z" />
@@ -81,18 +107,9 @@
     <!-- Walkthrough container -->
     <div id="walkthrough-container"></div>
 
-    <!-- Export footer -->
-    <footer id="export-footer" class="export-footer hidden">
-      <button id="export-btn" class="export-btn" title="Export flow definition as JSON">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M8 12l-4-4h2.5V3h3v5H12L8 12z"/>
-          <path d="M14 14H2v-3h1v2h10v-2h1v3z"/>
-        </svg>
-        Export Flow Definition
-      </button>
-    </footer>
   </div>
 
+  <script src="lib/xlsx.mini.min.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 
