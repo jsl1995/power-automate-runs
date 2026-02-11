@@ -30,12 +30,13 @@ A Chrome extension that displays run history for Power Automate Cloud Flows dire
 - **One-click navigation** - Click any run to view its full details
 - **Double-click to open** - Double-click a run row to navigate to run details
 - **Return to editor** - Quick button to return to the flow editor after viewing a run
-- **Export run history** - Export the last 10 runs as an Excel workbook (.xlsx) with a summary sheet and individual tabs per run showing all flow steps
+- **Export run history** - Export the last 10 runs as an Excel workbook (.xlsx) with a summary sheet and individual tabs per run showing all flow steps. Summary rows link directly to each run's sheet via hyperlinks
 - **Export flow definition** - Download the complete flow definition as JSON for backup, documentation, or migration
 - **Auto-detection** - Automatically detects when you're viewing a flow
 - **Power Apps support** - Detects flows opened in Power Apps and offers redirect to Power Automate
 - **Follows active tab** - Side panel automatically reloads when you switch tabs, so it always reflects the currently active flow
 - **Dark mode** - Toggle between light and dark themes from the side panel header; your preference is remembered across sessions
+- **Feedback link** - "Have an issue or feature request?" footer links directly to GitHub Issues with a prepopulated template
 
 ## Installation
 

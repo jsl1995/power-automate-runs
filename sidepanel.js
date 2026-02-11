@@ -729,10 +729,26 @@
       // Create workbook
       const wb = XLSX.utils.book_new();
 
+      // --- Pre-compute per-run sheet names ---
+      const usedNames = new Set(['Summary']);
+      const sheetNames = runs.map((run, i) => {
+        const status = run.properties?.status || 'Unknown';
+        const dateStr = formatSheetDate(run.properties?.startTime);
+        let sheetName = sanitizeSheetName(`${i + 1}. ${status} ${dateStr}`);
+        let suffix = 2;
+        const baseName = sheetName;
+        while (usedNames.has(sheetName)) {
+          sheetName = sanitizeSheetName(`${baseName} (${suffix})`);
+          suffix++;
+        }
+        usedNames.add(sheetName);
+        return sheetName;
+      });
+
       // --- Summary sheet ---
       const summaryHeaders = ['#', 'Run ID', 'Status', 'Start Time', 'End Time', 'Duration', 'Error'];
       const summaryRows = runs.map((run, i) => [
-        i + 1,
+        `Run ${i + 1}`,
         run.name,
         run.properties?.status || '',
         run.properties?.startTime || '',
@@ -743,23 +759,20 @@
       const summaryData = [summaryHeaders, ...summaryRows];
       const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
       autoFitColumns(summaryWs, summaryData);
+
+      // Add hyperlinks from summary rows to per-run sheets
+      runs.forEach((run, i) => {
+        const cellRef = XLSX.utils.encode_cell({ r: i + 1, c: 0 });
+        if (summaryWs[cellRef]) {
+          summaryWs[cellRef].l = { Target: "#'" + sheetNames[i] + "'!A1" };
+        }
+      });
+
       XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
 
       // --- Per-run sheets ---
-      const usedNames = new Set(['Summary']);
       runs.forEach((run, i) => {
-        const status = run.properties?.status || 'Unknown';
-        const dateStr = formatSheetDate(run.properties?.startTime);
-        let sheetName = sanitizeSheetName(`${i + 1}. ${status} ${dateStr}`);
-
-        // Ensure uniqueness
-        let suffix = 2;
-        const baseName = sheetName;
-        while (usedNames.has(sheetName)) {
-          sheetName = sanitizeSheetName(`${baseName} (${suffix})`);
-          suffix++;
-        }
-        usedNames.add(sheetName);
+        const sheetName = sheetNames[i];
 
         // Run info header rows
         const runData = [
@@ -980,6 +993,18 @@
   exportMenuBtn.addEventListener('click', toggleExportMenu);
   exportRunsBtn.addEventListener('click', exportRunHistory);
   exportFlowBtn.addEventListener('click', exportFlowDefinition);
+
+  // Feedback link — open GitHub new issue with prepopulated template
+  document.getElementById('feedback-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    const version = chrome.runtime.getManifest().version;
+    const params = new URLSearchParams({
+      title: '',
+      body: `**Describe the issue or feature request**\n\n\n**Steps to reproduce (if bug)**\n1. \n2. \n3. \n\n**Expected behavior**\n\n\n**Extension version:** ${version}\n**Browser:** ${navigator.userAgent}\n`,
+      labels: ''
+    });
+    chrome.tabs.create({ url: `https://github.com/jsl1995/power-automate-runs/issues/new?${params.toString()}` });
+  });
 
   // Close export menu on outside click
   document.addEventListener('click', (e) => {
