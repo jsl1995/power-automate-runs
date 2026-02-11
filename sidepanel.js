@@ -34,6 +34,71 @@
     });
   }
 
+  // Run async tasks with a concurrency limit
+  async function asyncPool(limit, items, iteratorFn) {
+    const results = [];
+    const executing = new Set();
+
+    for (const [index, item] of items.entries()) {
+      const promise = Promise.resolve().then(() => iteratorFn(item, index));
+      results.push(promise);
+      executing.add(promise);
+
+      const clean = () => executing.delete(promise);
+      promise.then(clean, clean);
+
+      if (executing.size >= limit) {
+        await Promise.race(executing);
+      }
+    }
+
+    return Promise.all(results);
+  }
+
+  // Fetch inputs and outputs for a single action via background service worker
+  async function fetchActionInputsOutputs(action) {
+    const MAX_CELL_LENGTH = 32767;
+    const result = { inputs: '', outputs: '' };
+
+    if (action.inputsLink && action.inputsLink.uri) {
+      try {
+        const resp = await chrome.runtime.sendMessage({
+          type: 'FETCH_ACTION_CONTENT',
+          contentUri: action.inputsLink.uri
+        });
+        if (resp && resp.success && resp.content != null) {
+          let json = JSON.stringify(resp.content);
+          if (json.length > MAX_CELL_LENGTH) {
+            json = json.substring(0, MAX_CELL_LENGTH - 14) + '...[TRUNCATED]';
+          }
+          result.inputs = json;
+        }
+      } catch (e) {
+        result.inputs = '[Error fetching inputs]';
+      }
+    }
+
+    if (action.outputsLink && action.outputsLink.uri) {
+      try {
+        const resp = await chrome.runtime.sendMessage({
+          type: 'FETCH_ACTION_CONTENT',
+          contentUri: action.outputsLink.uri
+        });
+        if (resp && resp.success && resp.content != null) {
+          let json = JSON.stringify(resp.content);
+          if (json.length > MAX_CELL_LENGTH) {
+            json = json.substring(0, MAX_CELL_LENGTH - 14) + '...[TRUNCATED]';
+          }
+          result.outputs = json;
+        }
+      } catch (e) {
+        result.outputs = '[Error fetching outputs]';
+      }
+    }
+
+    return result;
+  }
+
   // DOM elements
   const loadingEl = document.getElementById('loading');
   const noFlowEl = document.getElementById('no-flow');
@@ -682,6 +747,13 @@
     exportMenuBtn.disabled = true;
     exportMenuBtn.classList.add('exporting');
 
+    const progressEl = document.createElement('div');
+    progressEl.className = 'export-progress';
+    progressEl.setAttribute('role', 'status');
+    progressEl.setAttribute('aria-live', 'polite');
+    progressEl.textContent = 'Preparing export...';
+    exportDropdownEl.parentNode.insertBefore(progressEl, exportDropdownEl.nextSibling);
+
     try {
       // Try to get the flow name for the filename
       let flowName = currentContext.flowId;
@@ -725,6 +797,28 @@
       }));
 
       const actionsByRun = new Map(actionsResults.map(r => [r.runId, r.actions]));
+
+      // Phase 2: Fetch inputs/outputs for all actions across all runs
+      const contentByRunAction = new Map();
+
+      for (let i = 0; i < runs.length; i++) {
+        const run = runs[i];
+        const runId = run.name;
+        const actions = actionsByRun.get(runId) || [];
+
+        progressEl.textContent = `Fetching step details... Run ${i + 1}/${runs.length}`;
+
+        const contentResults = await asyncPool(5, actions, async (action) => {
+          const content = await fetchActionInputsOutputs(action);
+          return { actionName: action.name, content };
+        });
+
+        for (const { actionName, content } of contentResults) {
+          contentByRunAction.set(`${runId}::${actionName}`, content);
+        }
+      }
+
+      progressEl.textContent = 'Building Excel file...';
 
       // Create workbook
       const wb = XLSX.utils.book_new();
@@ -788,10 +882,12 @@
         // Steps table
         const actions = actionsByRun.get(run.name) || [];
         if (actions.length > 0) {
-          runData.push(['Step Name', 'Status', 'Error']);
+          runData.push(['Step Name', 'Status', 'Error', 'Inputs', 'Outputs']);
           for (const action of actions) {
             const stepError = action.error?.message || action.error?.details?.[0]?.message || '';
-            runData.push([action.name || '', action.status || '', stepError]);
+            const contentKey = `${run.name}::${action.name}`;
+            const content = contentByRunAction.get(contentKey) || { inputs: '', outputs: '' };
+            runData.push([action.name || '', action.status || '', stepError, content.inputs, content.outputs]);
           }
         } else {
           runData.push(['No steps found']);
@@ -821,6 +917,9 @@
     } finally {
       exportMenuBtn.disabled = false;
       exportMenuBtn.classList.remove('exporting');
+      if (progressEl && progressEl.parentNode) {
+        progressEl.remove();
+      }
     }
   }
 

@@ -1019,3 +1019,21 @@ button:focus-visible,
 .feedback-link:hover {
   text-decoration: underline;
 }
+
+/* Export progress indicator */
+.export-progress {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  z-index: 20;
+  animation: fadeInUp 0.15s ease-out;
+}

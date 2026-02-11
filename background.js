@@ -81,6 +81,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Fetch action input/output content from a pre-authenticated URI
+  if (message.type === 'FETCH_ACTION_CONTENT') {
+    const { contentUri } = message;
+
+    fetchActionContent(contentUri)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+
+    return true;
+  }
+
   // Fetch flow definition for export
   if (message.type === 'FETCH_FLOW_DEFINITION') {
     const { environmentId, flowId, tabId } = message;
@@ -248,7 +259,9 @@ async function fetchRunActions(tabId, environmentId, flowId, runId) {
       startTime: action.startTime,
       endTime: action.endTime,
       code: action.code,
-      error: action.error
+      error: action.error,
+      inputsLink: action.inputsLink || null,
+      outputsLink: action.outputsLink || null
     })).sort((a, b) => {
       // Sort by start time
       if (!a.startTime) return 1;
@@ -351,6 +364,29 @@ async function fetchFlowDefinition(tabId, environmentId, flowId) {
 
     const data = await response.json();
     return { success: true, flow: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Fetch action input/output content from pre-authenticated blob URI
+async function fetchActionContent(contentUri) {
+  if (!contentUri) {
+    return { success: false, error: 'No content URI provided' };
+  }
+
+  try {
+    const response = await fetch(contentUri, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `HTTP ${response.status}` };
+    }
+
+    const data = await response.json();
+    return { success: true, content: data };
   } catch (error) {
     return { success: false, error: error.message };
   }
