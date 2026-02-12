@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Flow Run Buddy",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "View run history for Power Automate Cloud Flows directly from the flow designer",
   "permissions": [
     "activeTab",
