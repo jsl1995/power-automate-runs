@@ -6,6 +6,8 @@
 
 A Chrome extension that displays run history for Power Automate Cloud Flows directly from the flow designer.
 
+[![Available on the Chrome Web Store](https://img.shields.io/chrome-web-store/v/gohhkaenioblnjajjpbojjkebdmipebd?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/flow-run-buddy/gohhkaenioblnjajjpbojjkebdmipebd)
+
 ## Screenshots
 
 <p align="center">
@@ -30,7 +32,7 @@ A Chrome extension that displays run history for Power Automate Cloud Flows dire
 - **One-click navigation** - Click any run to view its full details
 - **Double-click to open** - Double-click a run row to navigate to run details
 - **Return to editor** - Quick button to return to the flow editor after viewing a run
-- **Export run history** - Export the last 10 runs as an Excel workbook (.xlsx) with a summary sheet and individual tabs per run showing all flow steps. Summary rows link directly to each run's sheet via hyperlinks
+- **Export run history** - Export the last 10 runs as an Excel workbook (.xlsx) with a summary sheet and individual tabs per run showing all flow steps, including action inputs and outputs. Summary rows link directly to each run's sheet via hyperlinks
 - **Export flow definition** - Download the complete flow definition as JSON for backup, documentation, or migration
 - **Auto-detection** - Automatically detects when you're viewing a flow
 - **Power Apps support** - Detects flows opened in Power Apps and offers redirect to Power Automate
@@ -39,6 +41,12 @@ A Chrome extension that displays run history for Power Automate Cloud Flows dire
 - **Feedback link** - "Have an issue or feature request?" footer links directly to GitHub Issues with a prepopulated template
 
 ## Installation
+
+### Chrome Web Store (Recommended)
+
+Install directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/flow-run-buddy/gohhkaenioblnjajjpbojjkebdmipebd).
+
+### Manual / Developer Install
 
 1. Clone or download this repository
 2. Open Chrome and navigate to `chrome://extensions/`
