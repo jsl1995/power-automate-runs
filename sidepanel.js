@@ -1176,6 +1176,13 @@
       description: 'Toggle between light and dark themes to match your preference or reduce eye strain.',
       selector: '#theme-toggle',
       arrowPosition: 'bottom'
+    },
+    {
+      id: 'feedback',
+      title: 'Report an Issue',
+      description: 'Found a bug or have a feature idea? Click here to open a GitHub issue — the template is prefilled with your extension version and browser info.',
+      selector: '.feedback-footer',
+      tooltipPosition: 'above'
     }
   ];
 
@@ -1298,8 +1305,7 @@
     // Get position for tooltip - use element position relative to sidepanel
     const rect = targetEl.getBoundingClientRect();
     const containerRect = walkthroughContainer.getBoundingClientRect();
-    const tooltipTop = rect.bottom - containerRect.top + 12;
-    // Calculate arrow position to point at the center of the target element
+    const isAbove = step.tooltipPosition === 'above';
     const arrowLeft = Math.max(20, Math.min(rect.left - containerRect.left + rect.width / 2 - 6, containerRect.width - 32));
 
     // Build dots indicator
@@ -1310,9 +1316,14 @@
       return `<div class="${dotClass}"></div>`;
     }).join('');
 
+    const tooltipStyle = isAbove
+      ? `bottom: ${containerRect.bottom - rect.top + 12}px`
+      : `top: ${rect.bottom - containerRect.top + 12}px`;
+    const arrowClass = isAbove ? 'arrow-bottom' : 'arrow-top';
+
     walkthroughContainer.innerHTML = `
       <div class="walkthrough-overlay"></div>
-      <div class="walkthrough-tooltip arrow-top" style="top: ${tooltipTop}px; --arrow-left: ${arrowLeft}px;">
+      <div class="walkthrough-tooltip ${arrowClass}" style="${tooltipStyle}; --arrow-left: ${arrowLeft}px;">
         <div class="walkthrough-step-indicator">
           <div class="walkthrough-step-badge">${walkthroughStep + 1}</div>
           <div class="walkthrough-step-count">of ${walkthroughSteps.length}</div>
