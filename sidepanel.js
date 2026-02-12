@@ -1164,6 +1164,13 @@
       arrowPosition: 'bottom'
     },
     {
+      id: 'export',
+      title: 'Export Run History',
+      description: 'Export your run history as an Excel workbook with a summary sheet and per-run tabs including step inputs and outputs. You can also export the flow definition as JSON.',
+      selector: '#export-menu-btn',
+      arrowPosition: 'bottom'
+    },
+    {
       id: 'theme',
       title: 'Dark Mode',
       description: 'Toggle between light and dark themes to match your preference or reduce eye strain.',
@@ -1222,7 +1229,7 @@
           </svg>
         </div>
         <h2>Welcome to Flow Run Buddy!</h2>
-        <p>Let's take a quick tour to show you how to view run history, expand steps, and manage your flows.</p>
+        <p>Let's take a quick tour to show you how to view run history, expand steps, export data, and manage your flows.</p>
         <div class="walkthrough-welcome-actions">
           <button class="walkthrough-start-btn" id="walkthrough-start">Start Tour</button>
           <button class="walkthrough-dismiss-btn" id="walkthrough-dismiss">Skip for now</button>
