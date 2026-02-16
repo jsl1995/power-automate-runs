@@ -16,8 +16,13 @@
     const environmentId = envMatch[1];
     let flowId = null;
 
-    // Match /flows/{flowId} pattern (Power Automate)
-    let flowMatch = url.match(/\/flows\/([^/?]+)/);
+    // Match /flows/shared/{flowId} pattern (Power Automate - shared flows)
+    let flowMatch = url.match(/\/flows\/shared\/([^/?]+)/);
+    
+    // Match /flows/{flowId} pattern (Power Automate - regular flows)
+    if (!flowMatch) {
+      flowMatch = url.match(/\/flows\/([^/?]+)/);
+    }
     
     // Also match /objects/cloudflows/{flowId} pattern (Power Apps)
     if (!flowMatch) {
