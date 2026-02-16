@@ -31,6 +31,7 @@ A Chrome extension that displays run history for Power Automate Cloud Flows dire
 - **Inline error details** - When a run fails, expand it to see the flow-level failure message and step errors directly in the panel
 - **One-click navigation** - Click any run to view its full details
 - **Double-click to open** - Double-click a run row to navigate to run details
+- **Configurable tab behavior** - Choose whether flow runs open in a new tab or current tab (set during initial walkthrough or change anytime via footer preference)
 - **Return to editor** - Quick button to return to the flow editor after viewing a run
 - **Export run history** - Export the last 10 runs as an Excel workbook (.xlsx) with a summary sheet and individual tabs per run showing all flow steps, including action inputs and outputs. Summary rows link directly to each run's sheet via hyperlinks
 - **Export flow definition** - Download the complete flow definition as JSON for backup, documentation, or migration
@@ -58,12 +59,14 @@ Install directly from the [Chrome Web Store](https://chromewebstore.google.com/d
 
 1. Navigate to a Power Automate flow in the designer at `make.powerautomate.com`
 2. Click the extension icon in the toolbar to open the side panel
-3. View the run history for the current flow
-4. Click the expand button (▼) on any run to see individual step results
-5. Double-click a run or click the chevron (›) to navigate to the run detail page
-6. Use the "Return to Flow Editor" button to go back to the flow designer
-7. Use the refresh button to reload the run list
-8. Click the **Export** dropdown in the header to export run history as Excel or the flow definition as JSON
+3. On first use, complete the interactive walkthrough to learn key features and set your preference for how flow runs should open (new tab or current tab)
+4. View the run history for the current flow
+5. Click the expand button (▼) on any run to see individual step results
+6. Double-click a run or click the chevron (›) to navigate to the run detail page
+7. Use the "Return to Flow Editor" button to go back to the flow designer
+8. Use the refresh button to reload the run list
+9. Click the **Export** dropdown in the header to export run history as Excel or the flow definition as JSON
+10. To change your tab preference later, click "Change" in the preference footer at the bottom of the panel
 
 When you switch to a different tab, the side panel will automatically refresh to show the context and run history (if available) for the newly active tab.
 

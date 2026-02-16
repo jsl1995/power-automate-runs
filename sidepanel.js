@@ -923,15 +923,48 @@
     }
   }
 
-  // Open run in current tab
-  function openRun(runId) {
+  // Set tab opening preference
+  function setTabPreference(preference) {
+    try {
+      chrome.storage?.local?.set({ tabPreference: preference });
+      updatePreferenceFooter(preference);
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }
+
+  // Get tab opening preference
+  async function getTabPreference() {
+    return new Promise((resolve) => {
+      try {
+        chrome.storage?.local?.get(['tabPreference'], (result) => {
+          if (chrome.runtime.lastError) {
+            resolve('currentTab'); // Default to current tab
+            return;
+          }
+          resolve(result?.tabPreference || 'currentTab');
+        });
+      } catch (e) {
+        resolve('currentTab');
+      }
+    });
+  }
+
+  // Open run in current or new tab based on user preference
+  async function openRun(runId) {
     if (!currentContext) return;
 
     const { environmentId, flowId, origin } = currentContext;
     const baseUrl = origin || 'https://make.powerautomate.com';
     const runUrl = `${baseUrl}/environments/${environmentId}/flows/${flowId}/runs/${runId}`;
 
-    chrome.tabs.update(currentTabId, { url: runUrl });
+    const preference = await getTabPreference();
+    
+    if (preference === 'newTab') {
+      chrome.tabs.create({ url: runUrl });
+    } else {
+      chrome.tabs.update(currentTabId, { url: runUrl });
+    }
   }
 
   // Return to flow editor
@@ -1105,6 +1138,73 @@
     chrome.tabs.create({ url: `https://github.com/jsl1995/power-automate-runs/issues/new?${params.toString()}` });
   });
 
+  // Initialize preference footer
+  async function initPreferenceFooter() {
+    const preference = await getTabPreference();
+    updatePreferenceFooter(preference);
+  }
+
+  // Update preference footer text
+  function updatePreferenceFooter(preference) {
+    const preferenceFooter = document.getElementById('preference-footer');
+    const preferenceText = document.getElementById('preference-text');
+    
+    if (preferenceFooter && preferenceText) {
+      preferenceFooter.classList.remove('hidden');
+      const displayText = preference === 'newTab' ? 'New Tabs' : 'Current Tab';
+      preferenceText.textContent = `Flow Runs will open in ${displayText}`;
+    }
+  }
+
+  // Show preference selection modal
+  function showPreferenceModal() {
+    const container = document.getElementById('walkthrough-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="walkthrough-overlay"></div>
+      <div class="walkthrough-welcome">
+        <h2>Choose Your Preference</h2>
+        <p style="margin: 12px 0 24px;">When you open a flow run, would you like it to open in a new tab or the current tab?</p>
+        <div class="walkthrough-preference-buttons">
+          <button class="walkthrough-pref-btn" id="modal-pref-new-tab" data-preference="newTab">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 2h8v2H4v8h8V8h2v6H2V2z"/>
+              <path d="M10 2h4v4l-1.5-1.5L9 8 8 7l3.5-3.5L10 2z"/>
+            </svg>
+            New Tab
+          </button>
+          <button class="walkthrough-pref-btn" id="modal-pref-current-tab" data-preference="currentTab">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 2h12v12H2V2zm2 2v8h8V4H4z"/>
+              <path d="M6 8l2 2 4-4"/>
+            </svg>
+            Current Tab
+          </button>
+        </div>
+        <button class="walkthrough-dismiss-btn" id="modal-cancel">Cancel</button>
+      </div>
+    `;
+
+    document.getElementById('modal-pref-new-tab').addEventListener('click', () => {
+      setTabPreference('newTab');
+      container.innerHTML = '';
+    });
+    document.getElementById('modal-pref-current-tab').addEventListener('click', () => {
+      setTabPreference('currentTab');
+      container.innerHTML = '';
+    });
+    document.getElementById('modal-cancel').addEventListener('click', () => {
+      container.innerHTML = '';
+    });
+  }
+
+  // Preference change button handler
+  const preferenceChangeBtn = document.getElementById('preference-change');
+  if (preferenceChangeBtn) {
+    preferenceChangeBtn.addEventListener('click', showPreferenceModal);
+  }
+
   // Close export menu on outside click
   document.addEventListener('click', (e) => {
     if (!exportDropdownEl.contains(e.target)) {
@@ -1183,6 +1283,14 @@
       description: 'Found a bug or have a feature idea? Click here to open a GitHub issue — the template is prefilled with your extension version and browser info.',
       selector: '.feedback-footer',
       tooltipPosition: 'above'
+    },
+    {
+      id: 'tab-preference',
+      title: 'Choose Your Preference',
+      description: 'When you open a flow run, would you like it to open in a new tab or the current tab?',
+      selector: '.feedback-footer',
+      tooltipPosition: 'above',
+      isPreferenceStep: true
     }
   ];
 
@@ -1278,6 +1386,13 @@
     }
 
     const step = walkthroughSteps[walkthroughStep];
+    
+    // Handle special preference step
+    if (step.isPreferenceStep) {
+      showPreferenceStep(step);
+      return;
+    }
+    
     const targetEl = document.querySelector(step.selector);
 
     // Handle optional steps (like cancel button which may not be present)
@@ -1399,6 +1514,78 @@
     });
   }
 
+  // Show preference selection step
+  function showPreferenceStep(step) {
+    const targetEl = document.querySelector(step.selector);
+    if (!targetEl) {
+      // Skip if target not found
+      walkthroughStep++;
+      showWalkthroughStep();
+      return;
+    }
+
+    const rect = targetEl.getBoundingClientRect();
+    const containerRect = walkthroughContainer.getBoundingClientRect();
+    const isAbove = step.tooltipPosition === 'above';
+    const arrowLeft = Math.max(20, Math.min(rect.left - containerRect.left + rect.width / 2 - 6, containerRect.width - 32));
+
+    const dotsHtml = walkthroughSteps.map((_, i) => {
+      let dotClass = 'walkthrough-dot';
+      if (i < walkthroughStep) dotClass += ' completed';
+      else if (i === walkthroughStep) dotClass += ' active';
+      return `<div class="${dotClass}"></div>`;
+    }).join('');
+
+    const tooltipStyle = isAbove
+      ? `bottom: ${containerRect.bottom - rect.top + 12}px`
+      : `top: ${rect.bottom - containerRect.top + 12}px`;
+    const arrowClass = isAbove ? 'arrow-bottom' : 'arrow-top';
+
+    walkthroughContainer.innerHTML = `
+      <div class="walkthrough-overlay"></div>
+      <div class="walkthrough-tooltip ${arrowClass}" style="${tooltipStyle}; --arrow-left: ${arrowLeft}px;">
+        <div class="walkthrough-step-indicator">
+          <div class="walkthrough-step-badge">${walkthroughStep + 1}</div>
+          <div class="walkthrough-step-count">of ${walkthroughSteps.length}</div>
+        </div>
+        <div class="walkthrough-title">${step.title}</div>
+        <div class="walkthrough-description">${step.description}</div>
+        <div class="walkthrough-preference-buttons">
+          <button class="walkthrough-pref-btn" id="pref-new-tab" data-preference="newTab">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 2h8v2H4v8h8V8h2v6H2V2z"/>
+              <path d="M10 2h4v4l-1.5-1.5L9 8 8 7l3.5-3.5L10 2z"/>
+            </svg>
+            New Tab
+          </button>
+          <button class="walkthrough-pref-btn" id="pref-current-tab" data-preference="currentTab">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 2h12v12H2V2zm2 2v8h8V4H4z"/>
+              <path d="M6 8l2 2 4-4"/>
+            </svg>
+            Current Tab
+          </button>
+        </div>
+        <div class="walkthrough-actions">
+          <button class="walkthrough-skip" id="walkthrough-skip">Skip for now</button>
+          <div class="walkthrough-dots">${dotsHtml}</div>
+        </div>
+      </div>
+    `;
+
+    targetEl.classList.add('walkthrough-highlight');
+
+    document.getElementById('walkthrough-skip').addEventListener('click', dismissWalkthrough);
+    document.getElementById('pref-new-tab').addEventListener('click', () => {
+      setTabPreference('newTab');
+      completeWalkthrough();
+    });
+    document.getElementById('pref-current-tab').addEventListener('click', () => {
+      setTabPreference('currentTab');
+      completeWalkthrough();
+    });
+  }
+
   // End walkthrough and cleanup
   function endWalkthrough() {
     walkthroughActive = false;
@@ -1435,5 +1622,6 @@
   }
 
   loadThemePreference();
+  initPreferenceFooter();
   init();
 })();
