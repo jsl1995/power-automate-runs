@@ -963,7 +963,12 @@
     if (preference === 'newTab') {
       chrome.tabs.create({ url: runUrl });
     } else {
-      chrome.tabs.update(currentTabId, { url: runUrl });
+      // Fallback to opening in new tab if currentTabId is not available
+      if (currentTabId) {
+        chrome.tabs.update(currentTabId, { url: runUrl });
+      } else {
+        chrome.tabs.create({ url: runUrl });
+      }
     }
   }
 
@@ -1151,7 +1156,7 @@
     
     if (preferenceFooter && preferenceText) {
       preferenceFooter.classList.remove('hidden');
-      const displayText = preference === 'newTab' ? 'New Tabs' : 'Current Tab';
+      const displayText = preference === 'newTab' ? 'a New Tab' : 'the Current Tab';
       preferenceText.textContent = `Flow Runs will open in ${displayText}`;
     }
   }
