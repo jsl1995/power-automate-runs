@@ -81,6 +81,7 @@ If you open a flow from Power Apps (`make.powerapps.com`), the extension will di
 The extension detects when you're on a Power Automate flow designer page by matching URL patterns:
 ```
 https://make.powerautomate.com/environments/{environmentId}/flows/{flowId}/*
+https://make.powerautomate.com/environments/{environmentId}/flows/shared/{flowId}/*
 ```
 
 It then fetches run history from the Power Automate API using your existing browser session credentials.
