@@ -315,7 +315,54 @@ async function resubmitRun(tabId, environmentId, flowId, runId) {
     return { success: false, error: 'Could not find auth token.' };
   }
 
-  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/triggers/manual/histories/${runId}/resubmit?api-version=2016-11-01`;
+  // Fetch the run details and flow definition to get the actual trigger name
+  let triggerName = 'manual';
+  try {
+    // First, try to get the trigger name from the specific run's properties
+    const runUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/runs/${runId}?api-version=2016-11-01`;
+    const runResponse = await fetch(runUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (runResponse.ok) {
+      const runData = await runResponse.json();
+      const runTriggerName = runData?.properties?.trigger?.name;
+      if (runTriggerName) {
+        triggerName = runTriggerName;
+      } else {
+        // Fall back to the flow definition's first trigger
+        const defUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}?api-version=2016-11-01`;
+        const defResponse = await fetch(defUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (defResponse.ok) {
+          const defData = await defResponse.json();
+          const triggers = defData?.properties?.definition?.triggers;
+          if (triggers) {
+            const triggerKeys = Object.keys(triggers);
+            if (triggerKeys.length > 0) {
+              triggerName = triggerKeys[0];
+            }
+          }
+        } else {
+          console.warn('Failed to fetch flow definition for trigger name, status:', defResponse.status);
+        }
+      }
+    } else {
+      console.warn('Failed to fetch run details for trigger name, status:', runResponse.status);
+    }
+  } catch (e) {
+    console.warn('Failed to fetch trigger name for resubmit, using fallback:', e);
+  }
+
+  const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/triggers/${triggerName}/histories/${runId}/resubmit?api-version=2016-11-01`;
 
   try {
     const response = await fetch(apiUrl, {
