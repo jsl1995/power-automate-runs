@@ -112,6 +112,7 @@
   const retryBtn = document.getElementById('retry-btn');
   const backToEditorEl = document.getElementById('back-to-editor');
   const backBtn = document.getElementById('back-btn');
+  const saveAndRunBtn = document.getElementById('save-and-run-btn');
   const themeToggleBtn = document.getElementById('theme-toggle');
   const exportDropdownEl = document.getElementById('export-dropdown');
   const exportMenuBtn = document.getElementById('export-menu-btn');
@@ -974,6 +975,61 @@
     }
   }
 
+  // Save and run: ensure tab is on flow editor, then ask background to save in page + trigger flow
+  async function saveAndRun() {
+    if (!currentContext || !flowEditorUrl || !currentTabId) {
+      showNotification('No flow context. Open a flow in the editor first.', 'error');
+      return;
+    }
+    if (!saveAndRunBtn) return;
+    saveAndRunBtn.disabled = true;
+    try {
+      const tab = await chrome.tabs.get(currentTabId);
+      const isOnEditor = tab.url && tab.url.startsWith(flowEditorUrl.split('?')[0]);
+      if (!isOnEditor) {
+        await new Promise((resolve, reject) => {
+          const listener = (updatedTabId, changeInfo) => {
+            if (updatedTabId !== currentTabId) return;
+            if (changeInfo.status === 'complete') {
+              chrome.tabs.onUpdated.removeListener(listener);
+              resolve();
+            }
+          };
+          chrome.tabs.onUpdated.addListener(listener);
+          chrome.tabs.update(currentTabId, { url: flowEditorUrl }).catch((e) => {
+            chrome.tabs.onUpdated.removeListener(listener);
+            reject(e);
+          });
+          setTimeout(() => {
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
+          }, 10000);
+        });
+      }
+      const response = await chrome.runtime.sendMessage({
+        type: 'SAVE_AND_RUN',
+        tabId: currentTabId,
+        environmentId: currentContext.environmentId,
+        flowId: currentContext.flowId
+      });
+      if (response && response.success) {
+        showNotification('Flow saved and triggered successfully.', 'success');
+        loadRuns();
+      } else {
+        showNotification(response?.error || 'Save and run failed.', 'error');
+      }
+    } catch (error) {
+      showNotification(error?.message || 'Save and run failed.', 'error');
+    } finally {
+      // Re-enable only after the toast has been displayed (next frame paint)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (saveAndRunBtn) saveAndRunBtn.disabled = false;
+        });
+      });
+    }
+  }
+
   // Fetch runs via background script
   async function loadRuns() {
     if (!currentContext || !currentTabId || isLoading) return;
@@ -1121,6 +1177,7 @@
   });
 
   backBtn.addEventListener('click', returnToEditor);
+  if (saveAndRunBtn) saveAndRunBtn.addEventListener('click', saveAndRun);
   openInPowerAutomateBtn.addEventListener('click', openInPowerAutomate);
   exportMenuBtn.addEventListener('click', toggleExportMenu);
   exportRunsBtn.addEventListener('click', exportRunHistory);

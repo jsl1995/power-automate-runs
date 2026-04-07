@@ -5,16 +5,19 @@ const tabContexts = new Map();
 
 // Handle extension install/update
 chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason === 'install') {
+  if (details.reason === "install") {
     // First install - ensure walkthrough flags are cleared so it shows
-    chrome.storage.local.remove(['walkthroughCompleted', 'walkthroughDismissed']);
+    chrome.storage.local.remove([
+      "walkthroughCompleted",
+      "walkthroughDismissed",
+    ]);
   }
 });
 
 // Listen for messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Flow context update from content script
-  if (message.type === 'FLOW_CONTEXT' && sender.tab) {
+  if (message.type === "FLOW_CONTEXT" && sender.tab) {
     const tabId = sender.tab.id;
 
     if (message.context) {
@@ -24,81 +27,94 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     // Notify side panel of context change
-    chrome.runtime.sendMessage({
-      type: 'CONTEXT_UPDATED',
-      context: message.context,
-      tabId: tabId
-    }).catch(() => { });
+    chrome.runtime
+      .sendMessage({
+        type: "CONTEXT_UPDATED",
+        context: message.context,
+        tabId: tabId,
+      })
+      .catch(() => {});
   }
 
   // Get context for a specific tab
-  if (message.type === 'GET_CONTEXT_FOR_TAB') {
+  if (message.type === "GET_CONTEXT_FOR_TAB") {
     sendResponse(tabContexts.get(message.tabId) || null);
     return true;
   }
 
   // Fetch runs - first get token from page, then fetch from background
-  if (message.type === 'FETCH_RUNS') {
+  if (message.type === "FETCH_RUNS") {
     const { environmentId, flowId, tabId } = message;
 
     fetchRunsWithToken(tabId, environmentId, flowId)
-      .then(result => sendResponse(result))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
 
     return true;
   }
 
   // Fetch run actions/steps
-  if (message.type === 'FETCH_RUN_ACTIONS') {
+  if (message.type === "FETCH_RUN_ACTIONS") {
     const { environmentId, flowId, runId, tabId } = message;
 
     fetchRunActions(tabId, environmentId, flowId, runId)
-      .then(result => sendResponse(result))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
 
     return true;
   }
 
   // Cancel a running flow
-  if (message.type === 'CANCEL_RUN') {
+  if (message.type === "CANCEL_RUN") {
     const { environmentId, flowId, runId, tabId } = message;
 
     cancelRun(tabId, environmentId, flowId, runId)
-      .then(result => sendResponse(result))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
 
     return true;
   }
 
   // Resubmit a flow run
-  if (message.type === 'RESUBMIT_RUN') {
+  if (message.type === "RESUBMIT_RUN") {
     const { environmentId, flowId, runId, tabId } = message;
 
     resubmitRun(tabId, environmentId, flowId, runId)
-      .then(result => sendResponse(result))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
 
     return true;
   }
 
   // Fetch action input/output content from a pre-authenticated URI
-  if (message.type === 'FETCH_ACTION_CONTENT') {
+  if (message.type === "FETCH_ACTION_CONTENT") {
     const { contentUri } = message;
 
     fetchActionContent(contentUri)
-      .then(result => sendResponse(result))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
 
     return true;
   }
 
   // Fetch flow definition for export
-  if (message.type === 'FETCH_FLOW_DEFINITION') {
+  if (message.type === "FETCH_FLOW_DEFINITION") {
     const { environmentId, flowId, tabId } = message;
 
     fetchFlowDefinition(tabId, environmentId, flowId)
-      .then(result => sendResponse(result))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+
+    return true;
+  }
+
+  // Save in Flow Editor tab then trigger the flow
+  if (message.type === "SAVE_AND_RUN") {
+    const { environmentId, flowId, tabId } = message;
+
+    runSaveAndTriggerFlow(tabId, environmentId, flowId)
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
 
     return true;
   }
@@ -111,12 +127,16 @@ async function fetchRunsWithToken(tabId, environmentId, flowId) {
   // Extract token from page's storage - look for Flow API token specifically
   const tokenResults = await chrome.scripting.executeScript({
     target: { tabId: tabId },
-    world: 'MAIN',
+    world: "MAIN",
     func: () => {
       try {
         // MSAL stores tokens with keys containing the scope/resource
         // Look for tokens scoped to flow.microsoft.com or service.flow.microsoft.com
-        const flowScopes = ['flow.microsoft.com', 'service.flow.microsoft.com', 'api.flow.microsoft.com'];
+        const flowScopes = [
+          "flow.microsoft.com",
+          "service.flow.microsoft.com",
+          "api.flow.microsoft.com",
+        ];
 
         // Check sessionStorage first (MSAL often uses this)
         for (let i = 0; i < sessionStorage.length; i++) {
@@ -124,22 +144,27 @@ async function fetchRunsWithToken(tabId, environmentId, flowId) {
           if (!key) continue;
 
           const keyLower = key.toLowerCase();
-          const isFlowToken = flowScopes.some(scope => keyLower.includes(scope));
-          const isMsalToken = keyLower.includes('accesstoken') || keyLower.includes('access_token');
+          const isFlowToken = flowScopes.some((scope) =>
+            keyLower.includes(scope),
+          );
+          const isMsalToken =
+            keyLower.includes("accesstoken") ||
+            keyLower.includes("access_token");
 
           if (isFlowToken || isMsalToken) {
             const value = sessionStorage.getItem(key);
             try {
               const parsed = JSON.parse(value);
               // MSAL format: { secret: "token..." } or { accessToken: "token..." }
-              const token = parsed.secret || parsed.accessToken || parsed.access_token;
-              if (token && typeof token === 'string' && token.length > 100) {
+              const token =
+                parsed.secret || parsed.accessToken || parsed.access_token;
+              if (token && typeof token === "string" && token.length > 100) {
                 // Verify it's a Flow API token by checking scope in key
-                if (flowScopes.some(scope => keyLower.includes(scope))) {
+                if (flowScopes.some((scope) => keyLower.includes(scope))) {
                   return token;
                 }
               }
-            } catch (e) { }
+            } catch (e) {}
           }
         }
 
@@ -149,30 +174,42 @@ async function fetchRunsWithToken(tabId, environmentId, flowId) {
           if (!key) continue;
 
           const keyLower = key.toLowerCase();
-          const isFlowToken = flowScopes.some(scope => keyLower.includes(scope));
-          const isMsalToken = keyLower.includes('accesstoken') || keyLower.includes('access_token');
+          const isFlowToken = flowScopes.some((scope) =>
+            keyLower.includes(scope),
+          );
+          const isMsalToken =
+            keyLower.includes("accesstoken") ||
+            keyLower.includes("access_token");
 
           if (isFlowToken || isMsalToken) {
             const value = localStorage.getItem(key);
             try {
               const parsed = JSON.parse(value);
-              const token = parsed.secret || parsed.accessToken || parsed.access_token;
-              if (token && typeof token === 'string' && token.length > 100) {
-                if (flowScopes.some(scope => keyLower.includes(scope))) {
+              const token =
+                parsed.secret || parsed.accessToken || parsed.access_token;
+              if (token && typeof token === "string" && token.length > 100) {
+                if (flowScopes.some((scope) => keyLower.includes(scope))) {
                   return token;
                 }
               }
-            } catch (e) { }
+            } catch (e) {}
           }
         }
 
         // Fallback: look for any valid-looking access token
         const allStorage = {
           ...Object.fromEntries(
-            [...Array(sessionStorage.length)].map((_, i) => [sessionStorage.key(i), sessionStorage.getItem(sessionStorage.key(i))])
-          ), ...Object.fromEntries(
-            [...Array(localStorage.length)].map((_, i) => [localStorage.key(i), localStorage.getItem(localStorage.key(i))])
-          )
+            [...Array(sessionStorage.length)].map((_, i) => [
+              sessionStorage.key(i),
+              sessionStorage.getItem(sessionStorage.key(i)),
+            ]),
+          ),
+          ...Object.fromEntries(
+            [...Array(localStorage.length)].map((_, i) => [
+              localStorage.key(i),
+              localStorage.getItem(localStorage.key(i)),
+            ]),
+          ),
         };
 
         for (const [key, value] of Object.entries(allStorage)) {
@@ -180,24 +217,27 @@ async function fetchRunsWithToken(tabId, environmentId, flowId) {
           try {
             const parsed = JSON.parse(value);
             const token = parsed.secret || parsed.accessToken;
-            if (token && typeof token === 'string' && token.length > 500) {
+            if (token && typeof token === "string" && token.length > 500) {
               // Long tokens are likely JWT access tokens
               return token;
             }
-          } catch (e) { }
+          } catch (e) {}
         }
 
         return null;
       } catch (e) {
         return null;
       }
-    }
+    },
   });
 
   const token = tokenResults?.[0]?.result;
 
   if (!token) {
-    return { success: false, error: 'Could not find auth token. Please refresh the page.' };
+    return {
+      success: false,
+      error: "Could not find auth token. Please refresh the page.",
+    };
   }
 
   // Now fetch from background (bypasses CORS)
@@ -205,16 +245,19 @@ async function fetchRunsWithToken(tabId, environmentId, flowId) {
 
   try {
     const response = await fetch(apiUrl, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (!response.ok) {
       if (response.status === 401) {
-        return { success: false, error: 'Token expired. Please refresh the page.' };
+        return {
+          success: false,
+          error: "Token expired. Please refresh the page.",
+        };
       }
       return { success: false, error: `API error: ${response.status}` };
     }
@@ -231,18 +274,18 @@ async function fetchRunActions(tabId, environmentId, flowId, runId) {
   const token = await getToken(tabId);
 
   if (!token) {
-    return { success: false, error: 'Could not find auth token.' };
+    return { success: false, error: "Could not find auth token." };
   }
 
   const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/runs/${runId}?api-version=2016-11-01&$expand=properties/actions`;
 
   try {
     const response = await fetch(apiUrl, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (!response.ok) {
@@ -253,21 +296,23 @@ async function fetchRunActions(tabId, environmentId, flowId, runId) {
     const actions = data.properties?.actions || {};
 
     // Convert actions object to sorted array
-    const actionsList = Object.entries(actions).map(([name, action]) => ({
-      name: name,
-      status: action.status,
-      startTime: action.startTime,
-      endTime: action.endTime,
-      code: action.code,
-      error: action.error,
-      inputsLink: action.inputsLink || null,
-      outputsLink: action.outputsLink || null
-    })).sort((a, b) => {
-      // Sort by start time
-      if (!a.startTime) return 1;
-      if (!b.startTime) return -1;
-      return new Date(a.startTime) - new Date(b.startTime);
-    });
+    const actionsList = Object.entries(actions)
+      .map(([name, action]) => ({
+        name: name,
+        status: action.status,
+        startTime: action.startTime,
+        endTime: action.endTime,
+        code: action.code,
+        error: action.error,
+        inputsLink: action.inputsLink || null,
+        outputsLink: action.outputsLink || null,
+      }))
+      .sort((a, b) => {
+        // Sort by start time
+        if (!a.startTime) return 1;
+        if (!b.startTime) return -1;
+        return new Date(a.startTime) - new Date(b.startTime);
+      });
 
     return { success: true, actions: actionsList };
   } catch (error) {
@@ -280,23 +325,26 @@ async function cancelRun(tabId, environmentId, flowId, runId) {
   const token = await getToken(tabId);
 
   if (!token) {
-    return { success: false, error: 'Could not find auth token.' };
+    return { success: false, error: "Could not find auth token." };
   }
 
   const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/runs/${runId}/cancel?api-version=2016-11-01`;
 
   try {
     const response = await fetch(apiUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (!response.ok) {
       if (response.status === 400) {
-        return { success: false, error: 'Run cannot be cancelled (may have already completed).' };
+        return {
+          success: false,
+          error: "Run cannot be cancelled (may have already completed).",
+        };
       }
       return { success: false, error: `API error: ${response.status}` };
     }
@@ -312,23 +360,23 @@ async function resubmitRun(tabId, environmentId, flowId, runId) {
   const token = await getToken(tabId);
 
   if (!token) {
-    return { success: false, error: 'Could not find auth token.' };
+    return { success: false, error: "Could not find auth token." };
   }
 
   const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/triggers/manual/histories/${runId}/resubmit?api-version=2016-11-01`;
 
   try {
     const response = await fetch(apiUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (!response.ok) {
       if (response.status === 400) {
-        return { success: false, error: 'Run cannot be resubmitted.' };
+        return { success: false, error: "Run cannot be resubmitted." };
       }
       return { success: false, error: `API error: ${response.status}` };
     }
@@ -344,18 +392,18 @@ async function fetchFlowDefinition(tabId, environmentId, flowId) {
   const token = await getToken(tabId);
 
   if (!token) {
-    return { success: false, error: 'Could not find auth token.' };
+    return { success: false, error: "Could not find auth token." };
   }
 
   const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}?api-version=2016-11-01`;
 
   try {
     const response = await fetch(apiUrl, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (!response.ok) {
@@ -369,16 +417,143 @@ async function fetchFlowDefinition(tabId, environmentId, flowId) {
   }
 }
 
+// Run save-and-wait in the Flow Editor tab, then trigger the flow via API
+async function runSaveAndTriggerFlow(tabId, environmentId, flowId) {
+  const saveResults = await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    func: () => {
+      return new Promise((resolve) => {
+        const saveButton = document.querySelector(
+          '[data-automation-id="saveFlow"]',
+        );
+        if (!saveButton) {
+          resolve({
+            success: false,
+            error: "Save button not found. Ensure you are in the Flow Editor.",
+          });
+          return;
+        }
+        saveButton.click();
+
+        const errorSvgPath = "M10 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16Z";
+        // Fluent UI success checkmark (circle + check path); error icon has only the circle
+        const successCheckmarkPath = "Zm3.36 5.65";
+        let attempts = 0;
+        const maxWait = 15;
+
+        const interval = setInterval(() => {
+          attempts += 1;
+
+          const errorIcons = Array.from(
+            document.querySelectorAll("svg"),
+          ).filter((svg) => {
+            if (svg.offsetParent === null) return false;
+            const pathEl = svg.querySelector("path");
+            const pathD = pathEl?.getAttribute("d") ?? svg.innerHTML;
+            // Error icon has circle path but NOT the checkmark (success has both)
+            return (
+              pathD.includes(errorSvgPath) && !pathD.includes(successCheckmarkPath)
+            );
+          });
+          if (errorIcons.length > 0) {
+            clearInterval(interval);
+            resolve({ success: false, error: "Error detected." });
+            return;
+          }
+
+          const successIcons = Array.from(
+            document.querySelectorAll("svg"),
+          ).filter((svg) => {
+            if (svg.offsetParent === null) return false;
+            const pathEl = svg.querySelector("path");
+            const pathD = pathEl?.getAttribute("d") ?? svg.innerHTML;
+            return pathD.includes(successCheckmarkPath);
+          });
+          if (successIcons.length > 0) {
+            clearInterval(interval);
+            resolve({ success: true });
+            return;
+          }
+
+          if (attempts >= maxWait) {
+            clearInterval(interval);
+            resolve({
+              success: false,
+              error: "Save did not complete in time.",
+            });
+          }
+        }, 1000);
+      });
+    },
+  });
+
+  const saveResult = saveResults?.[0]?.result;
+  if (!saveResult || !saveResult.success) {
+    return { success: false, error: saveResult?.error || "Save failed." };
+  }
+
+  return triggerFlow(tabId, environmentId, flowId);
+}
+
+// Trigger a flow (start a new run) using Flow Management API
+async function triggerFlow(tabId, environmentId, flowId) {
+  const token = await getToken(tabId);
+  if (!token) {
+    return { success: false, error: "Could not find auth token." };
+  }
+
+  const baseUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}?api-version=2016-11-01`;
+
+  try {
+    const detailsRes = await fetch(baseUrl, {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const details = await detailsRes.json();
+    const triggerUri = details?.properties?.flowTriggerUri;
+
+    if (!triggerUri) {
+      return {
+        success: false,
+        error: "No trigger URI. Ensure this flow has a Manual or HTTP trigger.",
+      };
+    }
+
+    const triggerRes = await fetch(triggerUri, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (triggerRes.ok) {
+      return { success: true };
+    }
+    const errorBody = await triggerRes.text();
+    return {
+      success: false,
+      error: errorBody || `Trigger failed: ${triggerRes.status}`,
+    };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 // Fetch action input/output content from pre-authenticated blob URI
 async function fetchActionContent(contentUri) {
   if (!contentUri) {
-    return { success: false, error: 'No content URI provided' };
+    return { success: false, error: "No content URI provided" };
   }
 
   try {
     const response = await fetch(contentUri, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' }
+      method: "GET",
+      headers: { Accept: "application/json" },
     });
 
     if (!response.ok) {
@@ -396,22 +571,26 @@ async function fetchActionContent(contentUri) {
 async function getToken(tabId) {
   const tokenResults = await chrome.scripting.executeScript({
     target: { tabId: tabId },
-    world: 'MAIN',
+    world: "MAIN",
     func: () => {
       try {
-        const flowScopes = ['flow.microsoft.com', 'service.flow.microsoft.com', 'api.flow.microsoft.com'];
+        const flowScopes = [
+          "flow.microsoft.com",
+          "service.flow.microsoft.com",
+          "api.flow.microsoft.com",
+        ];
 
         for (let i = 0; i < sessionStorage.length; i++) {
           const key = sessionStorage.key(i);
           if (!key) continue;
           const keyLower = key.toLowerCase();
-          if (flowScopes.some(scope => keyLower.includes(scope))) {
+          if (flowScopes.some((scope) => keyLower.includes(scope))) {
             const value = sessionStorage.getItem(key);
             try {
               const parsed = JSON.parse(value);
               const token = parsed.secret || parsed.accessToken;
               if (token && token.length > 100) return token;
-            } catch (e) { }
+            } catch (e) {}
           }
         }
 
@@ -419,13 +598,13 @@ async function getToken(tabId) {
           const key = localStorage.key(i);
           if (!key) continue;
           const keyLower = key.toLowerCase();
-          if (flowScopes.some(scope => keyLower.includes(scope))) {
+          if (flowScopes.some((scope) => keyLower.includes(scope))) {
             const value = localStorage.getItem(key);
             try {
               const parsed = JSON.parse(value);
               const token = parsed.secret || parsed.accessToken;
               if (token && token.length > 100) return token;
-            } catch (e) { }
+            } catch (e) {}
           }
         }
 
@@ -433,7 +612,7 @@ async function getToken(tabId) {
       } catch (e) {
         return null;
       }
-    }
+    },
   });
 
   return tokenResults?.[0]?.result;
@@ -450,11 +629,13 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     const tab = await chrome.tabs.get(activeInfo.tabId);
 
     // Let extension pages (e.g. side panel) know the active tab changed
-    chrome.runtime.sendMessage({
-      type: 'ACTIVE_TAB_CHANGED',
-      tabId: activeInfo.tabId,
-      url: tab.url
-    }).catch(() => { });
+    chrome.runtime
+      .sendMessage({
+        type: "ACTIVE_TAB_CHANGED",
+        tabId: activeInfo.tabId,
+        url: tab.url,
+      })
+      .catch(() => {});
   } catch (e) {
     // Ignore errors from tabs that may have been closed or are inaccessible
   }

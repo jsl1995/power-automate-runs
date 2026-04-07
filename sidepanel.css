@@ -290,16 +290,26 @@ body.dark-theme .theme-icon {
 }
 
 .back-to-editor {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
   padding: 8px 16px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
+}
+
+.back-to-editor .back-btn {
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 40px;
+  justify-content: center;
 }
 
 .back-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  flex: 1;
   padding: 8px 12px;
   border: 1px solid #0078d4;
   border-radius: 4px;
@@ -319,6 +329,13 @@ body.dark-theme .theme-icon {
 .back-btn:active {
   background: var(--color-primary-hover);
   color: #ffffff;
+}
+
+.back-btn:disabled,
+.back-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .back-btn svg {
