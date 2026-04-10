@@ -105,11 +105,7 @@ h1 {
 }
 
 .theme-icon {
-  transition: transform 0.2s ease;
-}
-
-body.dark-theme .theme-icon {
-  transform: rotate(180deg);
+  transition: opacity 0.15s ease;
 }
 
 .refresh-btn.spinning svg {
@@ -178,6 +174,14 @@ body.dark-theme .theme-icon {
   background: var(--color-surface-subtle);
 }
 
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
 .primary-btn {
   padding: 10px 20px;
   border: none;
@@ -233,8 +237,25 @@ body.dark-theme .theme-icon {
   cursor: not-allowed;
 }
 
+.export-menu-btn.exporting:disabled {
+  opacity: 1;
+}
+
+@keyframes exportIconGlow {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--color-success) 55%, transparent)) drop-shadow(0 0 6px color-mix(in srgb, var(--color-success) 35%, transparent));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--color-success) 85%, transparent)) drop-shadow(0 0 12px color-mix(in srgb, var(--color-success) 50%, transparent));
+  }
+}
+
 .export-menu-btn.exporting svg:first-child {
-  animation: spin 1s linear infinite;
+  color: var(--color-success);
+  animation: exportIconGlow 1.4s ease-in-out infinite;
 }
 
 .export-caret {

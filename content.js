@@ -3,6 +3,20 @@
 (function() {
   'use strict';
 
+  // Flow id appears under different path shapes; order matters (e.g. /flows/shared/ must beat /flows/).
+  function extractFlowIdFromUrl(url) {
+    const patterns = [
+      /\/flows\/shared\/([^/?]+)/,
+      /\/flows\/([^/?]+)/,
+      /\/objects\/cloudflows\/([^/?]+)/,
+    ];
+    for (let i = 0; i < patterns.length; i++) {
+      const m = url.match(patterns[i]);
+      if (m) return m[1];
+    }
+    return null;
+  }
+
   // Extract flow context from URL
   function extractFlowContext() {
     const url = window.location.href;
@@ -14,24 +28,7 @@
     if (!envMatch) return null;
 
     const environmentId = envMatch[1];
-    let flowId = null;
-
-    // Match /flows/shared/{flowId} pattern (Power Automate - shared flows)
-    let flowMatch = url.match(/\/flows\/shared\/([^/?]+)/);
-    
-    // Match /flows/{flowId} pattern (Power Automate - regular flows)
-    if (!flowMatch) {
-      flowMatch = url.match(/\/flows\/([^/?]+)/);
-    }
-    
-    // Also match /objects/cloudflows/{flowId} pattern (Power Apps)
-    if (!flowMatch) {
-      flowMatch = url.match(/\/objects\/cloudflows\/([^/?]+)/);
-    }
-    
-    if (flowMatch) {
-      flowId = flowMatch[1];
-    }
+    const flowId = extractFlowIdFromUrl(url);
 
     if (flowId) {
       return {
@@ -58,42 +55,11 @@
     }
   }
 
-  // Fetch runs using page's fetch (has auth cookies)
-  async function fetchRunsFromPage(environmentId, flowId) {
-    const apiUrl = `https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/${environmentId}/flows/${flowId}/runs?api-version=2016-11-01&$top=10`;
-
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.value || [];
-  }
-
   // Listen for messages from sidepanel/background
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'GET_FLOW_CONTEXT') {
       sendResponse(extractFlowContext());
       return false;
-    }
-
-    if (message.type === 'FETCH_RUNS_REQUEST') {
-      fetchRunsFromPage(message.environmentId, message.flowId)
-        .then(runs => {
-          sendResponse({ success: true, runs: runs });
-        })
-        .catch(error => {
-          sendResponse({ success: false, error: error.message });
-        });
-      return true; // Keep channel open for async response
     }
 
     return false;

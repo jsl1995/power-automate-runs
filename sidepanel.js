@@ -114,6 +114,8 @@
   const backBtn = document.getElementById('back-btn');
   const saveAndRunBtn = document.getElementById('save-and-run-btn');
   const themeToggleBtn = document.getElementById('theme-toggle');
+  const themeIconMoon = document.querySelector('.theme-icon-moon');
+  const themeIconSun = document.querySelector('.theme-icon-sun');
   const exportDropdownEl = document.getElementById('export-dropdown');
   const exportMenuBtn = document.getElementById('export-menu-btn');
   const exportMenuEl = document.getElementById('export-menu');
@@ -133,11 +135,15 @@
 
     if (currentTheme === 'dark') {
       document.body.classList.add('dark-theme');
+      if (themeIconMoon) themeIconMoon.classList.add('hidden');
+      if (themeIconSun) themeIconSun.classList.remove('hidden');
       if (themeToggleBtn) {
         themeToggleBtn.setAttribute('aria-label', 'Switch to light mode');
       }
     } else {
       document.body.classList.remove('dark-theme');
+      if (themeIconMoon) themeIconMoon.classList.remove('hidden');
+      if (themeIconSun) themeIconSun.classList.add('hidden');
       if (themeToggleBtn) {
         themeToggleBtn.setAttribute('aria-label', 'Switch to dark mode');
       }
